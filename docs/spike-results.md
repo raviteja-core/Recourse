@@ -8,20 +8,19 @@ This document records the actual behavior, request/response shapes, field struct
 *Status: COMPLETED (Verified against PayPal Sandbox)*
 
 ### Account Setup & Critical Environmental Requirements (README Troubleshooting)
-- **Account Country Matching Requirement:**
-  - **Critical Finding:** Non-US sandbox buyer accounts fail USD checkout and vault agreement flows with the generic PayPal error: *"Things don’t appear to be working at the moment."*
-  - **Requirement:** Both the PayPal Sandbox Business account (which owns the REST API app) and the Sandbox Personal (Buyer) account **must be US accounts** (`Country: United States`).
+- **Country Observation:**
+  - **Observed:** vault approval failed with an India buyer and worked with US buyer and merchant; cause not isolated.
   - **Account Role Separation:** The buyer account must be a Sandbox **Personal** account (`...personal.example.com`), distinct from the merchant business account (`...business.example.com`). PayPal prohibits an account from executing transactions or vaulting agreements against itself.
-  - **Browser Environment:** PayPal Sandbox uses aggressive cross-account tracking cookies. Always open approval links in an **Incognito / Private window** to prevent session collisions between the Developer Dashboard and Sandbox checkout.
-  - **Session Expiration:** Setup tokens and checkout approval tokens expire within 15–30 minutes in the sandbox environment.
+  - **Browser Environment (Unverified Hypothesis):** Opening approval links in an **Incognito / Private window** was used to avoid possible session/cookie collisions between the Developer Dashboard and Sandbox checkout.
+  - **Session Expiration (Unverified Hypothesis):** Setup tokens and checkout approval tokens may expire within 15–30 minutes in the sandbox environment.
 
 ### Observed API Findings & Response Shapes
 1. **Setup Token Query (`GET /v3/vault/setup-tokens/{id}`):**
    - After buyer approval in browser, status transitions to `"APPROVED"`.
    - Response includes:
      - `customer.id`: `"qyKatysRMd"`
-     - `payment_source.paypal.email_address`: `"sb-k4gfj53775260@personal.example.com"`
-     - `payment_source.paypal.payer_id`: `"NYNUQVQM79NSC"`
+     - `payment_source.paypal.email_address`: `"[REDACTED_BUYER_EMAIL]"`
+     - `payment_source.paypal.payer_id`: `"[REDACTED_BUYER_PAYER_ID]"`
      - Links include `rel: "self"` (`GET`) and `rel: "self"` (`POST /v3/vault/payment-tokens`).
 
 2. **Payment Token Exchange (`POST /v3/vault/payment-tokens`):**
@@ -71,7 +70,7 @@ This document records the actual behavior, request/response shapes, field struct
      - Capture Status: `"COMPLETED"`
      - Gross: `$45.00 USD`, Fee: `$2.06 USD`, Net: `$42.94 USD`
      - Seller Protection: `"ELIGIBLE"` (`ITEM_NOT_RECEIVED`, `UNAUTHORIZED_TRANSACTION`)
-     - Payer: `John Doe` (`sb-k4gfj53775260@personal.example.com`, Payer ID: `NYNUQVQM79NSC`)
+     - Payer: `John Doe` (`[REDACTED_BUYER_EMAIL]`, Payer ID: `[REDACTED_BUYER_PAYER_ID]`)
 
 4. **Conclusion for Architecture:**
    - Flow A (Vault setup token -> payment token -> unattended capture) works seamlessly and deterministically in sandbox without any fallback required.
@@ -80,13 +79,43 @@ This document records the actual behavior, request/response shapes, field struct
 ---
 
 ## Spike 2: Sandbox Dispute Lifecycle (`scripts/spike-2-disputes.ts`)
-*Status: Pending Phase 1 execution*
+*Status: COMPLETED (Verified against PayPal Sandbox)*
 
-- **Dispute Creation (`POST /v1/customer/disputes`):**
-- **Provide Evidence (`POST /v1/customer/disputes/{id}/provide-evidence`):**
-- **Make Offer / Accept Claim / Adjudicate:**
-- **Refund Status & Visibility in Buyer Account:**
-- **Field Findings & Deviations:**
+### Observed API Behavior & Lifecycle Findings
+1. **Dispute Polling (`GET /v1/customer/disputes`):**
+   - Polling successfully retrieved the active dispute filed via Resolution Center.
+   - Identified Dispute ID: `"PP-R-SQO-10196995"`
+   - `reason`: `"MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED"`
+   - `status`: `"UNDER_REVIEW"`
+   - `dispute_state`: `"UNDER_PAYPAL_REVIEW"` (transitions to `"REQUIRED_OTHER_PARTY_ACTION"` upon escalation)
+   - `dispute_life_cycle_stage`: `"INQUIRY"`
+   - `dispute_amount`: `{"currency_code": "USD", "value": "45.00"}`
+   - `disputed_transactions`:
+     - `seller_transaction_id`: `"76D72760UE464141G"` (Capture ID)
+     - `buyer_transaction_id`: `"9BK04809FG933510S"`
+     - `transaction_status`: `"HELD"`
+     - `fund_movements`: Debit hold placed on merchant for `$42.94 USD` (gross minus fee).
+
+2. **Contesting Dispute via Merchant Messaging (`POST /v1/customer/disputes/{id}/send-message`):**
+   - Successfully posted merchant defense message (`200 OK`).
+   - The message is immediately stored in the dispute record under `messages[]` with `posted_by: "SELLER"`.
+
+3. **Escalating from Inquiry to Claim (`POST /v1/customer/disputes/{id}/escalate`):**
+   - Escalation succeeded with `200 OK`.
+   - Dispute state transitioned to `"REQUIRED_OTHER_PARTY_ACTION"`.
+
+4. **Provide Evidence & Adjudication Restrictions:**
+   - Calling `POST /v1/customer/disputes/{id}/provide-evidence` or `/adjudicate` before PayPal specifically requests evidence returned `400/422: {"issue": "ACTION_NOT_ALLOWED_IN_CURRENT_DISPUTE_STATE"}`.
+   - Per PayPal's state machine, adjudication and evidence uploads require PayPal to set the status to `WAITING_FOR_SELLER_RESPONSE` and emit the corresponding `"rel": "adjudicate"` HATEOAS link.
+
+5. **Refund Mechanism Findings (Which Action Yields a Real Refund):**
+   - **Capture Refund (`POST /v2/payments/captures/{id}/refund`):**
+     - Tested against a live unattended vault order capture (`4MW82925T2060654E`).
+     - Succeeded immediately with `201 Created`, returning `status: "COMPLETED"` and Refund ID `"8CL74127HE2561626"`.
+     - Money is immediately moved back, visible in both accounts' transaction histories.
+   - **Dispute Accept Claim (`POST /v1/customer/disputes/{id}/accept-claim`):**
+     - Requires payload with `note` and valid `accept_claim_reason` (e.g. `"NOT_ABLE_TO_WIN"`, `"DID_NOT_SHIP_ITEM"`, `"COMPANY_POLICY"`).
+     - When a refund is accepted, PayPal settles the dispute and issues the refund. For automated programmatic execution in Defender, `POST /v2/payments/captures/{id}/refund` provides 100% deterministic, immediate settlement.
 
 ---
 
