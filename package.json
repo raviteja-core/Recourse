@@ -1,0 +1,47 @@
+{
+  "name": "recourse",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "test": "vitest run",
+    "seed": "tsx scripts/seed.ts",
+    "demo": "tsx scripts/demo.ts",
+    "spike:1": "tsx scripts/spike-1-vault-order.ts",
+    "spike:2": "tsx scripts/spike-2-disputes.ts",
+    "spike:3": "tsx scripts/spike-3-webhooks.ts",
+    "keygen": "tsx scripts/generate-key.ts"
+  },
+  "dependencies": {
+    "@ai-sdk/groq": "^1.1.9",
+    "ag-grid-community": "36.2.0",
+    "ag-grid-react": "36.2.0",
+    "ag-studio": "3.0.0",
+    "ag-studio-react": "3.0.0",
+    "ai": "^4.1.48",
+    "better-sqlite3": "^11.8.1",
+    "dotenv": "^16.4.7",
+    "jose": "^5.9.6",
+    "next": "16.3.6",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.6",
+    "tailwindcss": "^4",
+    "tsx": "^4.19.3",
+    "typescript": "^5",
+    "vitest": "^3.0.7"
+  }
+}
+

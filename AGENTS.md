@@ -22,3 +22,4 @@ Read all of `docs/RECOURSE_SPEC.md` before doing anything else.
    - Strictly follow the priority order: **P0 > P1 > P2**.
    - Keep `npm run demo` runnable and passing from Phase 2 onward.
    - If time is short, cut P2 first, then P1 from the bottom up. Explicitly inform the user of any cuts.
+
