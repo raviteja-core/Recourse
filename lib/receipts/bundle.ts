@@ -114,3 +114,4 @@ export function verifyReceiptChain(receipts: ReceiptRecord[]): { valid: boolean;
 
   return { valid: true };
 }
+

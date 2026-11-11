@@ -104,3 +104,4 @@ describe('Receipt Bundle & Tamper-Evident Hash Chain', () => {
     expect(result.error).toContain('Broken link');
   });
 });
+

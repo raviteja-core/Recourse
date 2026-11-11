@@ -2,8 +2,7 @@ import Database from 'better-sqlite3';
 import * as path from 'path';
 import * as fs from 'fs';
 
-const dbPath = process.env.DATABASE_PATH || './data/recourse.db';
-const resolvedPath = path.resolve(process.cwd(), dbPath);
+const resolvedPath = path.join(process.cwd(), 'data', 'recourse.db');
 
 // Ensure directory exists
 const dir = path.dirname(resolvedPath);
@@ -157,3 +156,4 @@ export function initSchema(db: Database.Database) {
     );
   `);
 }
+

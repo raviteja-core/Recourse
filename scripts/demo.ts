@@ -10,6 +10,8 @@ import { parseMandateNaturalLanguage, signMandate } from '../lib/mandate';
 import { createCartProposal, executeShopperOrder, approveCartProposal } from '../lib/agents/shopper';
 import { advanceVirtualTime, getCurrentVirtualTime } from '../lib/merchants/fulfillment';
 import { verifyReceiptChain } from '../lib/receipts/bundle';
+import { generateResolverCaseFile } from '../lib/agents/resolver';
+import { processDisputeDecision } from '../lib/agents/defender';
 
 const isReplay = process.argv.includes('--replay');
 
@@ -156,6 +158,38 @@ async function main() {
   console.log(`Chain Integrity: ${chainResult.valid ? 'VERIFIED (UNBROKEN & TAMPER-EVIDENT)' : 'COMPROMISED'}`);
   if (!chainResult.valid) {
     throw new Error(`Receipt chain verification failed: ${chainResult.error}`);
+  }
+
+  console.log('\n--- 8. SCENARIO S3: RESOLVER CASE FILE & DEFENDER SETTLEMENT ---');
+  if (isReplay) {
+    console.log('[Data Source: recorded sandbox data (verified PayPal dispute PP-R-XFQ-10198901)]');
+  } else {
+    console.log('[Data Source: live sandbox API]');
+  }
+  const jacketOrder = db.prepare(`
+    SELECT o.* FROM orders o
+    JOIN carts c ON o.cart_id = c.id
+    WHERE c.merchant_id = 'ridgeback' AND c.items_json LIKE '%jacket%'
+  `).get() as any;
+
+  if (jacketOrder) {
+    console.log(`Resolver Agent inspecting order ${jacketOrder.id} (Capture: ${jacketOrder.paypal_capture_id})...`);
+    const caseFile = generateResolverCaseFile(jacketOrder.id);
+    console.log(`Case File Created: [${caseFile.caseId}] for $${caseFile.disputedAmount.toFixed(2)} USD`);
+    console.log(`Reason: ${caseFile.reason}`);
+    console.log(`Summary: ${caseFile.summary}`);
+    console.log(`Copy-Paste Filing Text: "${caseFile.copyPasteFilingText}"`);
+
+    console.log(`\nDefender Agent scoring evidence and evaluating Expected Value (EV)...`);
+    const defenderDecision = await processDisputeDecision(caseFile.caseId, jacketOrder.id, { replayMode: isReplay });
+    console.log(`Evidence Rubric Score (pWin): ${defenderDecision.pWin.toFixed(2)}`);
+    console.log(`EV Contest: $${defenderDecision.evAnalysis.evContest.toFixed(2)} vs EV Accept: $${defenderDecision.evAnalysis.evAccept.toFixed(2)}`);
+    console.log(`Deterministic Decision: ${defenderDecision.decision}`);
+    console.log(`Defender Narrative: ${defenderDecision.narrative}`);
+    console.log(`Settlement Action: ${defenderDecision.actionTaken}`);
+    if (defenderDecision.refundId) {
+      console.log(`Verified Refund ID: ${defenderDecision.refundId}`);
+    }
   }
 
   const updatedMandate = db.prepare('SELECT * FROM mandates WHERE id = ?').get(mandateId) as any;

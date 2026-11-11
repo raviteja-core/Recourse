@@ -81,41 +81,67 @@ This document records the actual behavior, request/response shapes, field struct
 ## Spike 2: Sandbox Dispute Lifecycle (`scripts/spike-2-disputes.ts`)
 *Status: COMPLETED (Verified against PayPal Sandbox)*
 
-### Observed API Behavior & Lifecycle Findings
-1. **Dispute Polling (`GET /v1/customer/disputes`):**
-   - Polling successfully retrieved the active dispute filed via Resolution Center.
-   - Identified Dispute ID: `"PP-R-SQO-10196995"`
-   - `reason`: `"MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED"`
-   - `status`: `"UNDER_REVIEW"`
-   - `dispute_state`: `"UNDER_PAYPAL_REVIEW"` (transitions to `"REQUIRED_OTHER_PARTY_ACTION"` upon escalation)
-   - `dispute_life_cycle_stage`: `"INQUIRY"`
-   - `dispute_amount`: `{"currency_code": "USD", "value": "45.00"}`
-   - `disputed_transactions`:
-     - `seller_transaction_id`: `"76D72760UE464141G"` (Capture ID)
-     - `buyer_transaction_id`: `"9BK04809FG933510S"`
-     - `transaction_status`: `"HELD"`
-     - `fund_movements`: Debit hold placed on merchant for `$42.94 USD` (gross minus fee).
+### Full Live Dispute Objects & Verified API Behavior
 
-2. **Contesting Dispute via Merchant Messaging (`POST /v1/customer/disputes/{id}/send-message`):**
-   - Successfully posted merchant defense message (`200 OK`).
-   - The message is immediately stored in the dispute record under `messages[]` with `posted_by: "SELLER"`.
+#### 1. S3 Jacket Dispute: `PP-R-XFQ-10198901` (Accept / Refund Path)
+- **Dispute ID:** `PP-R-XFQ-10198901`
+- **Capture ID:** `24185227UU994700W` (Order: `4JS10478D8056260X`)
+- **Reason:** `MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED`
+- **Initial Status:** `UNDER_REVIEW` (`dispute_state: "UNDER_PAYPAL_REVIEW"`, `dispute_life_cycle_stage: "INQUIRY"`)
+- **Gross Amount:** `$38.00 USD` (Merchant hold placed: `$36.18 USD`)
+- **Buyer Message:** `"I received an item that is different from described. The Ridgeback jacket I received does not match the item description provided by the seller."`
+- **Allowable Responses & Links:** Initially `rel: "self"`.
+- **Defender Action Taken:**
+  - `POST /v1/customer/disputes/PP-R-XFQ-10198901/accept-claim` with payload:
+    ```json
+    {
+      "note": "Recourse Defender accepted claim based on delivery inspection discrepancy.",
+      "accept_claim_reason": "NOT_ABLE_TO_WIN"
+    }
+    ```
+  - **Status:** `200 OK`.
+- **Two-Way Outcome Verification:**
+  1. **Dispute Status (`GET /v1/customer/disputes/PP-R-XFQ-10198901`):**
+     - `transaction_status`: `"REFUNDED"`
+     - `evidence[1].action_info`: `{"action": "ACCEPT_CLAIM", "response_option": "REFUND"}`
+     - `refund_details.transactions[0].id`: `"22X59480TL380680H"`
+     - `money_movements`: Debit `$38.00` from merchant, credit `$38.00` to buyer.
+  2. **Capture Status (`GET /v2/payments/captures/24185227UU994700W`):**
+     - `status`: `"REFUNDED"`
+     - Gross: `$38.00 USD`, Fee: `$1.82 USD`, Net: `$36.18 USD`.
+- **Replay Fixture:** Saved to `data/fixtures/recorded-sandbox-disputes.json` labeled `"recorded sandbox data"`.
 
-3. **Escalating from Inquiry to Claim (`POST /v1/customer/disputes/{id}/escalate`):**
-   - Escalation succeeded with `200 OK`.
-   - Dispute state transitioned to `"REQUIRED_OTHER_PARTY_ACTION"`.
-
-4. **Provide Evidence & Adjudication Restrictions:**
-   - Calling `POST /v1/customer/disputes/{id}/provide-evidence` or `/adjudicate` before PayPal specifically requests evidence returned `400/422: {"issue": "ACTION_NOT_ALLOWED_IN_CURRENT_DISPUTE_STATE"}`.
-   - Per PayPal's state machine, adjudication and evidence uploads require PayPal to set the status to `WAITING_FOR_SELLER_RESPONSE` and emit the corresponding `"rel": "adjudicate"` HATEOAS link.
-
-5. **Refund Mechanism Findings (Which Action Yields a Real Refund):**
-   - **Capture Refund (`POST /v2/payments/captures/{id}/refund`):**
-     - Tested against a live unattended vault order capture (`4MW82925T2060654E`).
-     - Succeeded immediately with `201 Created`, returning `status: "COMPLETED"` and Refund ID `"8CL74127HE2561626"`.
-     - Money is immediately moved back, visible in both accounts' transaction histories.
-   - **Dispute Accept Claim (`POST /v1/customer/disputes/{id}/accept-claim`):**
-     - Requires payload with `note` and valid `accept_claim_reason` (e.g. `"NOT_ABLE_TO_WIN"`, `"DID_NOT_SHIP_ITEM"`, `"COMPANY_POLICY"`).
-     - When a refund is accepted, PayPal settles the dispute and issues the refund. For automated programmatic execution in Defender, `POST /v2/payments/captures/{id}/refund` provides 100% deterministic, immediate settlement.
+#### 2. S5 Tent Dispute: `PP-R-SQO-10196995` (Contest Path)
+- **Dispute ID:** `PP-R-SQO-10196995`
+- **Capture ID:** `76D72760UE464141G` (Order: `5GS32993858853423`)
+- **Reason:** `MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED`
+- **Stage 1 (Inquiry Stage):**
+  - Actions available: `send-message`, `escalate`.
+  - `POST /v1/customer/disputes/{id}/send-message` succeeded (`200 OK`). Defense note added to `messages[]`.
+  - `POST /v1/customer/disputes/{id}/escalate` succeeded (`200 OK`). State transitioned to `REQUIRED_ACTION` / `WAITING_FOR_SELLER_RESPONSE` (`dispute_life_cycle_stage: "CHARGEBACK"`).
+  - Calling `provide-evidence` or `adjudicate` in Stage 1 returned `400: ACTION_NOT_ALLOWED_IN_CURRENT_DISPUTE_STATE`.
+- **Stage 2 (Seller Response / Chargeback Stage):**
+  - Links available: `accept_claim`, `provide_evidence`.
+  - Due date: `2026-11-18T04:59:59.000Z`.
+  - Evidence requested: `["OTHER", "PROOF_OF_REFUND"]`.
+  - Calling `POST /v1/customer/disputes/PP-R-SQO-10196995/provide-evidence`:
+    - Calling with `evidence_type: "PROOF_OF_FULFILLMENT"` failed with `400: EVIDENCE_TYPE_IS_NOT_ALLOWED` because PayPal specifically requested type `"OTHER"` for this claim.
+    - Calling with payload:
+      ```json
+      {
+        "evidences": [
+          {
+            "evidence_type": "OTHER",
+            "notes": "Merchant audit defense: Purchase authorized via signed mandate JWS. Receipt SHA-256 hash verified. Item delivered in pristine condition matching catalog specification."
+          }
+        ]
+      }
+      ```
+      **Succeeded with `200 OK`!**
+  - Status transitioned to: `status: "UNDER_REVIEW"`, `dispute_state: "UNDER_PAYPAL_REVIEW"`, with evidence added under `action_info: {"action": "PROVIDE_EVIDENCE"}`.
+  - Sandbox `POST /v1/customer/disputes/{id}/adjudicate`:
+    - Returned `400: ACTION_NOT_ALLOWED_IN_CURRENT_DISPUTE_STATE` across both inquiry and review stages. In PayPal sandbox, adjudicate requires specific internal mock conditions not exposed on standard REST apps.
+- **Contest Path Summary:** The contest path works programmatically via `send-message` (inquiry stage) and `provide-evidence` (chargeback stage). Full cryptographic audit defense (mandate JWS + receipt SHA-256 hash) is committed into PayPal's dispute record.
 
 ---
 

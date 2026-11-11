@@ -1,0 +1,321 @@
+{
+  "label": "recorded sandbox data",
+  "recordedAt": "2026-11-11T13:56:26.954Z",
+  "disputes": {
+    "s3JacketNotAsDescribed": {
+      "dispute_id": "PP-R-XFQ-10198901",
+      "create_time": "2026-11-11T13:47:57.526Z",
+      "update_time": "2026-11-11T13:53:57.702Z",
+      "disputed_transactions": [
+        {
+          "buyer_transaction_id": "2NW35265TY1393246",
+          "seller_transaction_id": "24185227UU994700W",
+          "create_time": "2026-11-07T14:28:15.000Z",
+          "transaction_status": "REFUNDED",
+          "gross_amount": {
+            "currency_code": "USD",
+            "value": "38.00"
+          },
+          "custom": "ord-1794061692738-jj1i",
+          "buyer": {
+            "email": "[REDACTED_BUYER_EMAIL]",
+            "payer_id": "[REDACTED_BUYER_PAYER_ID]",
+            "name": "John Doe"
+          },
+          "seller": {
+            "email": "[REDACTED_MERCHANT_EMAIL]",
+            "merchant_id": "[REDACTED_MERCHANT_ID]",
+            "name": "Test Store"
+          },
+          "items": [
+            {
+              "item_name": "Ridgeback StormShield All-Weather Jacket",
+              "item_description": "Ridgeback StormShield All-Weather Jacket",
+              "item_quantity": "1",
+              "reason": "MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED",
+              "notes": "I received an item that is different from described. The Ridgeback jacket I received does not match the item description provided by the seller.",
+              "item_type": "PRODUCT"
+            }
+          ],
+          "seller_protection_eligible": true,
+          "seller_protection_type": "EXPANDED_SELLER_PROTECTION"
+        }
+      ],
+      "reason": "MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED",
+      "status": "RESOLVED",
+      "dispute_amount": {
+        "currency_code": "USD",
+        "value": "38.00"
+      },
+      "dispute_state": "RESOLVED",
+      "dispute_outcome": {
+        "outcome_code": "RESOLVED_BUYER_FAVOUR",
+        "outcome_reason": "SELLER_ISSUED_REFUND",
+        "amount_refunded": {
+          "currency_code": "USD",
+          "value": "38.00"
+        }
+      },
+      "money_movements": [
+        {
+          "affected_party": "BUYER",
+          "amount": {
+            "currency_code": "USD",
+            "value": "38.00"
+          },
+          "initiated_time": "2026-11-11T13:52:08.344Z",
+          "type": "CREDIT",
+          "reason": "DISPUTE_SETTLEMENT"
+        },
+        {
+          "affected_party": "SELLER",
+          "amount": {
+            "currency_code": "USD",
+            "value": "38.00"
+          },
+          "initiated_time": "2026-11-11T13:52:08.344Z",
+          "type": "DEBIT",
+          "reason": "DISPUTE_SETTLEMENT"
+        },
+        {
+          "affected_party": "SELLER",
+          "amount": {
+            "currency_code": "USD",
+            "value": "1.82"
+          },
+          "initiated_time": "2026-11-11T13:52:08.344Z",
+          "type": "DEBIT",
+          "reason": "DISPUTE_SETTLEMENT_FEE"
+        }
+      ],
+      "fund_movements": [
+        {
+          "party": "SELLER",
+          "amount": {
+            "currency_code": "USD",
+            "value": "36.18"
+          },
+          "initiated_time": "2026-11-11T13:51:14.000Z",
+          "type": "DEBIT",
+          "reason": "HOLD_PLACED"
+        },
+        {
+          "party": "BUYER",
+          "amount": {
+            "currency_code": "USD",
+            "value": "38.00"
+          },
+          "initiated_time": "2026-11-11T13:52:08.344Z",
+          "type": "CREDIT",
+          "reason": "DISPUTE_SETTLEMENT"
+        },
+        {
+          "party": "SELLER",
+          "amount": {
+            "currency_code": "USD",
+            "value": "38.00"
+          },
+          "initiated_time": "2026-11-11T13:52:08.344Z",
+          "type": "DEBIT",
+          "reason": "DISPUTE_SETTLEMENT"
+        }
+      ],
+      "dispute_life_cycle_stage": "INQUIRY",
+      "dispute_channel": "INTERNAL",
+      "messages": [
+        {
+          "posted_by": "BUYER",
+          "time_posted": "2026-11-11T13:47:57.526Z",
+          "content": "I received an item that is different from described…"
+        }
+      ],
+      "extensions": {
+        "merchant_contacted": false,
+        "buyer_contacted_time": "2026-11-11T13:47:56.421Z"
+      },
+      "evidences": [
+        {
+          "evidence_type": "CREATE",
+          "notes": "I received an item that is different from described…",
+          "source": "SUBMITTED_BY_BUYER",
+          "date": "2026-11-11T13:47:57.526Z",
+          "dispute_life_cycle_stage": "INQUIRY"
+        },
+        {
+          "evidence_type": "OTHER",
+          "notes": "Recourse Defender accepted claim based on delivery inspection discrepancy.",
+          "source": "SUBMITTED_BY_SELLER",
+          "date": "2026-11-11T13:52:08.466Z",
+          "action_info": {
+            "action": "ACCEPT_CLAIM",
+            "response_option": "REFUND"
+          },
+          "dispute_life_cycle_stage": "INQUIRY"
+        }
+      ],
+      "offer": {
+        "buyer_requested_amount": {
+          "currency_code": "USD",
+          "value": "38.00"
+        }
+      },
+      "refund_details": {
+        "allowed_refund_amount": {
+          "currency_code": "USD",
+          "value": "38.00"
+        },
+        "transactions": [
+          {
+            "id": "22X59480TL380680H",
+            "gross_amount": {
+              "currency_code": "USD",
+              "value": "38.00"
+            },
+            "create_time": "2026-11-11T13:52:08.000Z"
+          }
+        ]
+      },
+      "links": [
+        {
+          "href": "https://api-m.sandbox.paypal.com/v1/customer/disputes/PP-R-XFQ-10198901",
+          "rel": "self",
+          "method": "GET",
+          "encType": "application/json"
+        }
+      ]
+    },
+    "s5TentContestedClaim": {
+      "dispute_id": "PP-R-SQO-10196995",
+      "create_time": "2026-11-07T14:13:56.371Z",
+      "update_time": "2026-11-11T13:53:34.698Z",
+      "disputed_transactions": [
+        {
+          "buyer_transaction_id": "9BK04809FG933510S",
+          "seller_transaction_id": "76D72760UE464141G",
+          "create_time": "2026-11-07T13:33:06.000Z",
+          "transaction_status": "HELD",
+          "gross_amount": {
+            "currency_code": "USD",
+            "value": "45.00"
+          },
+          "invoice_number": "INV-1794058384450",
+          "custom": "order-1794058384450",
+          "buyer": {
+            "email": "[REDACTED_BUYER_EMAIL]",
+            "payer_id": "[REDACTED_BUYER_PAYER_ID]",
+            "name": "John Doe"
+          },
+          "seller": {
+            "email": "[REDACTED_MERCHANT_EMAIL]",
+            "merchant_id": "[REDACTED_MERCHANT_ID]",
+            "name": "Test Store"
+          },
+          "items": [
+            {
+              "item_name": "tent",
+              "item_description": "tent",
+              "item_quantity": "1",
+              "reason": "MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED",
+              "notes": "Tent arrived with a torn rainfly. The item was damaged when delivered and is not in the condition described or expected.",
+              "item_type": "PRODUCT"
+            }
+          ],
+          "seller_protection_eligible": true,
+          "seller_protection_type": "EXPANDED_SELLER_PROTECTION"
+        }
+      ],
+      "reason": "MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED",
+      "status": "UNDER_REVIEW",
+      "dispute_amount": {
+        "currency_code": "USD",
+        "value": "45.00"
+      },
+      "dispute_state": "UNDER_PAYPAL_REVIEW",
+      "fund_movements": [
+        {
+          "party": "SELLER",
+          "amount": {
+            "currency_code": "USD",
+            "value": "42.94"
+          },
+          "initiated_time": "2026-11-07T14:17:02.000Z",
+          "type": "DEBIT",
+          "reason": "HOLD_PLACED"
+        }
+      ],
+      "dispute_life_cycle_stage": "CHARGEBACK",
+      "dispute_channel": "INTERNAL",
+      "messages": [
+        {
+          "posted_by": "BUYER",
+          "time_posted": "2026-11-07T14:13:56.371Z",
+          "content": "The tent arrived with a torn rainfly, making the product damaged and unsuitable for its intended use. The item was not received in the expected condition. I am reporting this as an item-not-as-described issue and requesting a refund of $45.00."
+        },
+        {
+          "posted_by": "SELLER",
+          "time_posted": "2026-11-07T14:18:12.607Z",
+          "content": "Merchant received your report. Verifying warehouse fulfillment logs."
+        }
+      ],
+      "extensions": {
+        "merchant_contacted": false,
+        "buyer_contacted_time": "2026-11-07T14:13:55.676Z"
+      },
+      "evidences": [
+        {
+          "evidence_type": "CREATE",
+          "notes": "The tent arrived with a torn rainfly, making the product damaged and unsuitable for its intended use. The item was not received in the expected condition. I am reporting this as an item-not-as-described issue and requesting a refund of $45.00.",
+          "source": "SUBMITTED_BY_BUYER",
+          "date": "2026-11-07T14:13:56.371Z",
+          "dispute_life_cycle_stage": "INQUIRY"
+        },
+        {
+          "evidence_type": "OTHER",
+          "notes": "Buyer and merchant could not reach agreement; escalating to PayPal claim.",
+          "source": "SUBMITTED_BY_SELLER",
+          "date": "2026-11-07T14:18:51.445Z",
+          "action_info": {
+            "action": "ESCALATE"
+          },
+          "dispute_life_cycle_stage": "INQUIRY"
+        },
+        {
+          "evidence_type": "OTHER",
+          "notes": "Merchant audit defense: Purchase authorized via signed mandate JWS. Receipt SHA-256 hash verified. Item delivered in pristine condition matching catalog specification.",
+          "source": "SUBMITTED_BY_SELLER",
+          "date": "2026-11-11T13:53:24.767Z",
+          "action_info": {
+            "action": "PROVIDE_EVIDENCE"
+          },
+          "dispute_life_cycle_stage": "CHARGEBACK"
+        }
+      ],
+      "offer": {
+        "buyer_requested_amount": {
+          "currency_code": "USD",
+          "value": "45.00"
+        }
+      },
+      "refund_details": {
+        "allowed_refund_amount": {
+          "currency_code": "USD",
+          "value": "45.00"
+        }
+      },
+      "links": [
+        {
+          "href": "https://api-m.sandbox.paypal.com/v1/customer/disputes/PP-R-SQO-10196995",
+          "rel": "self",
+          "method": "GET",
+          "encType": "application/json"
+        },
+        {
+          "href": "https://api-m.sandbox.paypal.com/v1/customer/disputes/PP-R-SQO-10196995/provide-supporting-info",
+          "rel": "provide_supporting_info",
+          "method": "POST",
+          "encType": "application/json"
+        }
+      ]
+    }
+  }
+}

@@ -197,3 +197,4 @@ describe('Mandate Guard Pure Evaluation Engine', () => {
     expect(result.reasons).toContain('CART_MISMATCH');
   });
 });
+
