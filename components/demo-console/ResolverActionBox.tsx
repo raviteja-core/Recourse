@@ -200,3 +200,4 @@ export function ResolverActionBox({ caseFile, defenderDecision }: ResolverAction
     </div>
   );
 }
+

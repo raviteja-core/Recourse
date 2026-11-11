@@ -130,7 +130,11 @@ async function main() {
 
   // 1. Generate Resolver Case File
   console.log('--- 1. RESOLVER AGENT GENERATING CASE FILE ---');
-  const caseFile = generateResolverCaseFile(orderDbId);
+  const resolution = generateResolverCaseFile(orderDbId);
+  if (resolution.status !== 'GROUNDS_FOUND') {
+    throw new Error(`Expected grounds found but got: ${resolution.status} - ${resolution.message}`);
+  }
+  const caseFile = resolution.caseFile;
   console.log(`Case ID: ${caseFile.caseId}`);
   console.log(`Disputed Amount: $${caseFile.disputedAmount.toFixed(2)} USD`);
   console.log(`Reason: ${caseFile.reason}`);

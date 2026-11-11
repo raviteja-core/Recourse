@@ -222,7 +222,12 @@ export default async function HomePage() {
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
                 <tr>
-                  <td className="py-3 px-3 font-semibold text-slate-900">S1: Approved Purchase</td>
+                  <td className="py-3 px-3 font-semibold text-slate-900">
+                    S1: Approved Purchase
+                    <span className="block mt-0.5 text-[10px] text-emerald-700 font-mono">
+                      [recorded sandbox data]
+                    </span>
+                  </td>
                   <td className="py-3 px-3">
                     Larkspur Trail 2-Person Tent
                     <span className="block text-[11px] text-slate-500">Larkspur Outdoors</span>
@@ -238,7 +243,12 @@ export default async function HomePage() {
                 </tr>
 
                 <tr>
-                  <td className="py-3 px-3 font-semibold text-slate-900">S2: Blocked Purchase</td>
+                  <td className="py-3 px-3 font-semibold text-slate-900">
+                    S2: Blocked Purchase
+                    <span className="block mt-0.5 text-[10px] text-blue-700 font-mono">
+                      [pure guard determination]
+                    </span>
+                  </td>
                   <td className="py-3 px-3">
                     AudioPro Noise-Cancelling Headphones
                     <span className="block text-[11px] text-slate-500">ElectroWorld</span>
@@ -256,7 +266,12 @@ export default async function HomePage() {
                 </tr>
 
                 <tr className="bg-amber-50/40">
-                  <td className="py-3 px-3 font-semibold text-slate-900">S3: Latent Defect</td>
+                  <td className="py-3 px-3 font-semibold text-slate-900">
+                    S3: Latent Defect
+                    <span className="block mt-0.5 text-[10px] text-emerald-700 font-mono">
+                      [recorded sandbox data]
+                    </span>
+                  </td>
                   <td className="py-3 px-3">
                     Ridgeback StormShield Jacket
                     <span className="block text-[11px] text-slate-500">Ridgeback Gear Co.</span>
@@ -274,7 +289,12 @@ export default async function HomePage() {
                 </tr>
 
                 <tr>
-                  <td className="py-3 px-3 font-semibold text-slate-900">S4: Human Approval</td>
+                  <td className="py-3 px-3 font-semibold text-slate-900">
+                    S4: Human Approval
+                    <span className="block mt-0.5 text-[10px] text-amber-800 font-mono">
+                      [synthetic placeholder]
+                    </span>
+                  </td>
                   <td className="py-3 px-3">
                     Ridgeback Expedition Pack 55L
                     <span className="block text-[11px] text-slate-500">Ridgeback Gear Co.</span>

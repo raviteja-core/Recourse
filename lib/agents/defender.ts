@@ -68,6 +68,54 @@ async function getAccessToken(): Promise<string> {
 }
 
 /**
+ * Deterministically constructs defense evidence statement strictly from stored DB fields.
+ * If records are missing, reports "no record available" and refuses to fabricate.
+ * Delivery records are explicitly labeled "simulated delivery record (sandbox)".
+ */
+export function buildDefenseEvidenceStatement(
+  receiptRow: any,
+  fulfillmentRow: any,
+  disputeReason: string
+): { evidenceText: string; hasMandate: boolean; hasReceipt: boolean; hasDelivery: boolean } {
+  const parts: string[] = [];
+  const receiptBundle = receiptRow?.bundle_json ? JSON.parse(receiptRow.bundle_json) : null;
+  const deliveryReport = fulfillmentRow?.delivery_report_json ? JSON.parse(fulfillmentRow.delivery_report_json) : null;
+
+  const hasMandate = Boolean(receiptBundle?.mandateHash && (receiptBundle?.mandateJws || receiptRow?.mandate_hash));
+  const hasReceipt = Boolean(receiptRow?.hash && receiptBundle?.cart);
+  const hasDelivery = Boolean(fulfillmentRow?.status && deliveryReport);
+
+  if (hasMandate) {
+    const mandateHash = (receiptBundle?.mandateHash || receiptRow?.mandate_hash || '').slice(0, 16);
+    parts.push(`Mandate JWS verified (hash: ${mandateHash}...). Deterministic Guard ALLOW.`);
+  } else {
+    parts.push('Mandate authorization: no record available.');
+  }
+
+  if (hasReceipt) {
+    const receiptHash = (receiptRow?.hash || '').slice(0, 16);
+    parts.push(`Receipt bundle cryptographically locked at purchase (SHA-256: ${receiptHash}...).`);
+  } else {
+    parts.push('Receipt bundle: no record available.');
+  }
+
+  if (hasDelivery) {
+    parts.push(
+      `Simulated delivery record (sandbox): carrier ${fulfillmentRow.carrier || 'USPS'}, tracking ${fulfillmentRow.tracking_number || 'N/A'}, status ${fulfillmentRow.status}, condition ${deliveryReport.condition}.`
+    );
+  } else {
+    parts.push('Fulfillment delivery: no record available.');
+  }
+
+  return {
+    evidenceText: parts.join(' '),
+    hasMandate,
+    hasReceipt,
+    hasDelivery,
+  };
+}
+
+/**
  * Deterministic rubric:
  * scoreEvidence(dispute, receiptBundle, fulfillment) -> pWin in [0, 1]
  */
@@ -86,20 +134,27 @@ export function scoreEvidence(
   // 1. Mandate authorization proof (mandate hash and signed JWS presence)
   if (receiptBundle?.mandateHash && receiptBundle?.guardDecision?.decision === 'ALLOW') {
     mandateAuthorizationProof = 0.30;
-    rubricNotes.push('Mandate authorization: JWS and Guard ALLOW verified (+0.30)');
+    rubricNotes.push(`Mandate authorization verified (${receiptBundle.mandateHash.slice(0, 12)}...): Guard ALLOW (+0.30)`);
+  } else {
+    mandateAuthorizationProof = -0.30;
+    contradictingFacts -= 0.15;
+    rubricNotes.push('No mandate record available: purchase lacks cryptographic authorization proof (-0.45)');
   }
 
-  // 2. Delivery proof / carrier tracking
+  // 2. Delivery proof / carrier tracking (simulated delivery record)
   const deliveryReport = fulfillment?.delivery_report_json
     ? JSON.parse(fulfillment.delivery_report_json)
     : null;
 
   if (fulfillment?.status === 'DELIVERED' || deliveryReport?.deliveredAt) {
     deliveryProof = 0.25;
-    rubricNotes.push(`Carrier delivery confirmed to destination (+0.25)`);
+    rubricNotes.push(`Simulated delivery record (sandbox): carrier delivery confirmed (+0.25)`);
   } else if (fulfillment?.status === 'STALLED' || deliveryReport?.condition === 'NEVER_ARRIVED') {
     deliveryProof = 0.0;
-    rubricNotes.push(`Shipment stalled or missing delivery proof (+0.00)`);
+    rubricNotes.push(`Simulated delivery record (sandbox): tracking stalled, delivery missing (+0.00)`);
+  } else {
+    contradictingFacts -= 0.20;
+    rubricNotes.push('No delivery record available: fulfillment record missing (-0.20)');
   }
 
   // 3. Item attributes & claim corroboration / contradiction
@@ -109,20 +164,20 @@ export function scoreEvidence(
     if (deliveryReport?.condition === 'DEFECTIVE_NOT_AS_DESCRIBED' || deliveryReport?.observedAttributes?.waterproof === false) {
       // Delivery inspection confirmed defect: buyer claim is corroborated by merchant's own inspection log
       itemAttributesMatch = -0.45;
-      contradictingFacts = -0.10;
-      rubricNotes.push(`Delivery inspection corroborates defect (waterproof soak test FAILED: -0.45)`);
+      contradictingFacts -= 0.10;
+      rubricNotes.push(`Simulated delivery record (sandbox): soak test FAILED, defect verified (-0.55)`);
     } else if (deliveryReport?.condition === 'PRISTINE') {
       claimContradicted = 0.35;
       itemAttributesMatch = 0.10;
-      rubricNotes.push(`Delivery inspection confirmed pristine factory condition (+0.45)`);
+      rubricNotes.push(`Simulated delivery record (sandbox): confirmed pristine factory condition (+0.45)`);
     }
   } else if (normReason.includes('NOT_RECEIVED')) {
     if (fulfillment?.status === 'DELIVERED') {
       claimContradicted = 0.40;
-      rubricNotes.push(`Tracking confirms completed carrier delivery (+0.40)`);
+      rubricNotes.push(`Simulated delivery record (sandbox): confirms carrier delivery (+0.40)`);
     } else {
-      contradictingFacts = -0.45;
-      rubricNotes.push(`Carrier tracking stalled; merchant cannot prove delivery (-0.45)`);
+      contradictingFacts -= 0.45;
+      rubricNotes.push(`Simulated delivery record (sandbox): tracking stalled (-0.45)`);
     }
   } else if (normReason.includes('UNAUTHORIZED')) {
     // Mandate JWS and vault authorization directly refute unauthorized claim
@@ -368,7 +423,13 @@ export async function processDisputeDecision(
       virtualTime.toISOString()
     );
   } else if (ev.optimalDecision === 'CONTEST') {
-    actionTaken = 'CONTEST_DEFENSE_SUBMITTED';
+    const defense = buildDefenseEvidenceStatement(receipt, fulfillment, reason);
+    if (!defense.hasMandate || !defense.hasReceipt) {
+      throw new Error(
+        'Integrity check failed: Defender refuses to contest without stored mandate and receipt records.'
+      );
+    }
+    actionTaken = 'CONTEST_DEFENSE_SUBMITTED (simulated delivery record sandbox)';
 
     if (!options.replayMode && disputeId.startsWith('PP-')) {
       const token = await getAccessToken();
@@ -379,10 +440,7 @@ export async function processDisputeDecision(
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message:
-            `Recourse Audit Defense: Order authorized via cryptographically signed mandate JWS. ` +
-            `Receipt SHA-256 hash: ${receipt?.hash || 'verified'}. Carrier USPS tracking: ${fulfillment?.tracking_number || 'verified'}. ` +
-            `Delivery condition verified pristine. Requesting seller favor.`,
+          message: defense.evidenceText,
         }),
       });
     }

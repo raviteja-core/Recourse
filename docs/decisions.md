@@ -12,6 +12,8 @@ This log tracks every deviation from `docs/RECOURSE_SPEC.md`, architectural deci
 | 2026-11-11 | Dispute Settlement: `accept-claim` with `NOT_ABLE_TO_WIN` | Defender uses `POST /v1/customer/disputes/{id}/accept-claim` with `accept_claim_reason: "NOT_ABLE_TO_WIN"`, which returns `200 OK` and transitions capture to `REFUNDED` with live refund transaction ID. Direct capture refund serves as fallback. | Verified |
 | 2026-11-11 | Dispute Contest: `provide-evidence` with `OTHER` | `POST /v1/customer/disputes/{id}/provide-evidence` requires `{ evidences: [{ evidence_type, notes }] }` matching requested type (`"OTHER"`). Adjudicate endpoint returns `400` in standard sandbox; contest path is verified via `provide-evidence` and `send-message`. | Verified |
 | 2026-11-11 | Dispute Handling Cost: Modeled Assumption | Modeled $15 dispute handling fee is configurable via `DISPUTE_HANDLING_COST` and labeled "modeled cost" across code, UI, and documentation. | Verified |
+| 2026-11-11 | Evidence Integrity Defect in Spike 2 Tent Artifact | The Spike 2 tent dispute (`PP-R-SQO-10196995`) evidence note cited a signed mandate JWS, receipt SHA-256 hash, and pristine delivery report. That order originated from Spike 1 prior to mandate and fulfillment simulator implementation; asserting non-existent records violated 'never fabricate evidence'. The defect was logged and corrected: `PP-R-SQO-10196995` is excluded from all fixtures, UI, and demo assets. The Defender engine was refactored to cite ONLY facts present in DB tables (mandates, receipts, fulfillments). Missing records yield 'no record available' and penalize pWin. | Defect Fixed |
+
 
 
 

@@ -1,6 +1,62 @@
 import { describe, it, expect } from 'vitest';
-import { scoreEvidence, calculateEV } from '../lib/agents/defender';
+import { scoreEvidence, calculateEV, buildDefenseEvidenceStatement } from '../lib/agents/defender';
 import { CaseFileSchema } from '../lib/agents/resolver';
+
+describe('Evidence Integrity & Defense Statement Construction', () => {
+  it('refuses to cite a mandate or receipt that does not exist for an order', () => {
+    // Order with no receipt and no fulfillment record
+    const defense = buildDefenseEvidenceStatement(null, null, 'MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED');
+    expect(defense.hasMandate).toBe(false);
+    expect(defense.hasReceipt).toBe(false);
+    expect(defense.hasDelivery).toBe(false);
+    expect(defense.evidenceText).toContain('Mandate authorization: no record available.');
+    expect(defense.evidenceText).toContain('Receipt bundle: no record available.');
+    expect(defense.evidenceText).toContain('Fulfillment delivery: no record available.');
+    expect(defense.evidenceText).not.toContain('Mandate JWS verified');
+    expect(defense.evidenceText).not.toContain('cryptographically locked');
+  });
+
+  it('correctly cites stored mandate JWS and receipt hash and labels delivery as simulated delivery record (sandbox)', () => {
+    const mockReceiptRow = {
+      mandate_hash: 'sha256-mandate-1234567890',
+      hash: 'sha256-receipt-abcdef1234567890',
+      bundle_json: JSON.stringify({
+        mandateHash: 'sha256-mandate-1234567890',
+        mandateJws: 'eyJhbGciOiJFUzI1NiJ9...',
+        cart: { items: [{ sku: 'tent-1', title: 'Tent' }] },
+      }),
+    };
+    const mockFulfillmentRow = {
+      carrier: 'USPS',
+      tracking_number: '9400111899223344556600',
+      status: 'DELIVERED',
+      delivery_report_json: JSON.stringify({ condition: 'PRISTINE' }),
+    };
+
+    const defense = buildDefenseEvidenceStatement(mockReceiptRow, mockFulfillmentRow, 'MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED');
+    expect(defense.hasMandate).toBe(true);
+    expect(defense.hasReceipt).toBe(true);
+    expect(defense.hasDelivery).toBe(true);
+    expect(defense.evidenceText).toContain('Mandate JWS verified (hash: sha256-mandate-1...).');
+    expect(defense.evidenceText).toContain('Receipt bundle cryptographically locked at purchase (SHA-256: sha256-receipt-a...).');
+    expect(defense.evidenceText).toContain('Simulated delivery record (sandbox): carrier USPS, tracking 9400111899223344556600, status DELIVERED, condition PRISTINE.');
+  });
+
+  it('heavily penalizes score when mandate authorization is missing from receipt', () => {
+    const receiptWithoutMandate = {
+      guardDecision: { decision: 'ALLOW' },
+      // mandateHash missing
+    };
+    const fulfillment = {
+      status: 'DELIVERED',
+      delivery_report_json: JSON.stringify({ condition: 'PRISTINE' }),
+    };
+
+    const score = scoreEvidence('MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED', receiptWithoutMandate, fulfillment);
+    expect(score.factors.mandateAuthorizationProof).toBeLessThan(0);
+    expect(score.rubricNotes.some((n) => n.includes('No mandate record available'))).toBe(true);
+  });
+});
 
 describe('Defender Evidence Scoring Rubric', () => {
   it('assigns low pWin when delivery inspection confirms defect (not as described)', () => {
@@ -80,6 +136,18 @@ describe('Defender Expected Value (EV) Engine', () => {
 });
 
 describe('Resolver Case File Schema Validation', () => {
+  it('validates NO_GROUNDS resolution when item matches listing in pristine condition', () => {
+    const noGrounds = {
+      status: 'NO_GROUNDS' as const,
+      orderId: 'ord-pristine-1',
+      reason: 'ITEM_MATCHES_LISTING' as const,
+      message: 'No grounds: item matches listing specifications in pristine condition.',
+      observedCondition: 'PRISTINE',
+    };
+    expect(noGrounds.status).toBe('NO_GROUNDS');
+    expect(noGrounds.reason).toBe('ITEM_MATCHES_LISTING');
+  });
+
   it('strictly validates a compliant case file', () => {
     const mockCase = {
       caseId: 'case-test-1',

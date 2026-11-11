@@ -31,7 +31,23 @@ export const CaseFileSchema = z.object({
 
 export type CaseFile = z.infer<typeof CaseFileSchema>;
 
-export function generateResolverCaseFile(orderId: string): CaseFile {
+export const CaseFileResolutionSchema = z.discriminatedUnion('status', [
+  z.object({
+    status: z.literal('GROUNDS_FOUND'),
+    caseFile: CaseFileSchema,
+  }),
+  z.object({
+    status: z.literal('NO_GROUNDS'),
+    orderId: z.string(),
+    reason: z.literal('ITEM_MATCHES_LISTING'),
+    message: z.string(),
+    observedCondition: z.string(),
+  }),
+]);
+
+export type CaseFileResolution = z.infer<typeof CaseFileResolutionSchema>;
+
+export function generateResolverCaseFile(orderId: string): CaseFileResolution {
   const db = getDb();
   const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId) as any;
   if (!order) throw new Error(`Order ${orderId} not found`);
@@ -49,17 +65,50 @@ export function generateResolverCaseFile(orderId: string): CaseFile {
   const virtualTime = getCurrentVirtualTime();
   const caseId = `case-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
-  let reason: 'MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED' | 'MERCHANDISE_OR_SERVICE_NOT_RECEIVED' =
-    'MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED';
-  let summary = '';
-  const facts: string[] = [];
-  let copyPasteFilingText = '';
-
   // Extract stored attributes from receipt bundle and delivery report
   const receiptItem = receiptBundle?.cart?.items?.find((i: any) => i.sku === primaryItem.sku || i.title === primaryItem.title) || primaryItem;
   const attributesAtPurchase = receiptItem.attributesAtPurchase || primaryItem.attributes || {};
   const observedAttributes = deliveryReport?.observedAttributes || {};
   const inspectorNotes = deliveryReport?.inspectorNotes || 'Inspection completed.';
+
+  // Check if item was delivered in pristine condition matching listing
+  if (fulfillment?.status === 'DELIVERED' && deliveryReport?.condition === 'PRISTINE') {
+    const discrepancies: string[] = [];
+    for (const [key, val] of Object.entries(attributesAtPurchase)) {
+      if (key in observedAttributes && observedAttributes[key] !== val) {
+        discrepancies.push(`${key}: expected ${JSON.stringify(val)} but got ${JSON.stringify(observedAttributes[key])}`);
+      }
+    }
+
+    if (discrepancies.length === 0) {
+      // Feature: Resolver agent refuses to manufacture or prepare a claim when stored facts confirm delivery in pristine condition
+      db.prepare(`
+        INSERT INTO agent_events (id, actor, type, payload_json, reasoning_text, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+      `).run(
+        `evt-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        'resolver',
+        'DISPUTE_REFUSED_NO_GROUNDS',
+        JSON.stringify({ orderId, condition: 'PRISTINE' }),
+        `Resolver refused to file dispute: simulated delivery record confirms item '${primaryItem.title}' matches listing specifications in pristine condition.`,
+        virtualTime.toISOString()
+      );
+
+      return {
+        status: 'NO_GROUNDS',
+        orderId,
+        reason: 'ITEM_MATCHES_LISTING',
+        message: 'No grounds: item matches listing specifications in pristine condition.',
+        observedCondition: 'PRISTINE',
+      };
+    }
+  }
+
+  let reason: 'MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED' | 'MERCHANDISE_OR_SERVICE_NOT_RECEIVED' =
+    'MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED';
+  let summary = '';
+  const facts: string[] = [];
+  let copyPasteFilingText = '';
 
   if (fulfillment?.status === 'STALLED' || deliveryReport?.condition === 'NEVER_ARRIVED') {
     reason = 'MERCHANDISE_OR_SERVICE_NOT_RECEIVED';
@@ -145,6 +194,6 @@ export function generateResolverCaseFile(orderId: string): CaseFile {
     virtualTime.toISOString()
   );
 
-  return validatedCase;
+  return { status: 'GROUNDS_FOUND', caseFile: validatedCase };
 }
 

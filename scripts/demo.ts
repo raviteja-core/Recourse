@@ -62,6 +62,7 @@ async function main() {
   );
 
   console.log('\n--- 2. SCENARIO S1: APPROVED PURCHASE (Larkspur Trail Tent $45.00) ---');
+  console.log(isReplay ? '[Data Source: recorded sandbox data (Order 4YY66781YU2917137 / Capture 7BH91632Y92698500)]' : '[Data Source: live sandbox API]');
   const p1 = createCartProposal(mandateId, ['tent-1'], 'Selected 2-person waterproof tent within outdoor category.');
   console.log(`Cart Proposed: ${p1.cartId} | Total: $${p1.total.toFixed(2)} | Merchant: ${p1.merchantId}`);
 
@@ -72,6 +73,7 @@ async function main() {
   console.log(`Receipt Hash: ${res1.receiptHash}`);
 
   console.log('\n--- 3. SCENARIO S2: BLOCKED PURCHASE (AudioPro Headphones $129.00) ---');
+  console.log('[Data Source: deterministic pure Guard evaluation (zero PayPal API calls)]');
   const p2 = createCartProposal(
     mandateId,
     ['headphones-1'],
@@ -86,6 +88,7 @@ async function main() {
   console.log(`Checkout Status: ${res2.success ? 'UNEXPECTED_SUCCESS' : 'BLOCKED AS EXPECTED'}`);
 
   console.log('\n--- 4. SCENARIO S3: PURCHASE WITH LATENT DEFECT (Ridgeback Jacket $38.00) ---');
+  console.log(isReplay ? '[Data Source: recorded sandbox data (Order 4JS10478D8056260X / Capture 24185227UU994700W)]' : '[Data Source: live sandbox API]');
   const p3 = createCartProposal(
     mandateId,
     ['jacket-1'],
@@ -100,6 +103,7 @@ async function main() {
   console.log(`Receipt Hash: ${res3.receiptHash}`);
 
   console.log('\n--- 5. HUMAN-APPROVAL FLOW (Ridgeback Expedition Pack $55.00 > $50 threshold) ---');
+  console.log('[Data Source: synthetic placeholder (awaiting live S4 run)]');
   const p4 = createCartProposal(
     mandateId,
     ['pack-1'],
@@ -174,21 +178,26 @@ async function main() {
 
   if (jacketOrder) {
     console.log(`Resolver Agent inspecting order ${jacketOrder.id} (Capture: ${jacketOrder.paypal_capture_id})...`);
-    const caseFile = generateResolverCaseFile(jacketOrder.id);
-    console.log(`Case File Created: [${caseFile.caseId}] for $${caseFile.disputedAmount.toFixed(2)} USD`);
-    console.log(`Reason: ${caseFile.reason}`);
-    console.log(`Summary: ${caseFile.summary}`);
-    console.log(`Copy-Paste Filing Text: "${caseFile.copyPasteFilingText}"`);
+    const resolution = generateResolverCaseFile(jacketOrder.id);
+    if (resolution.status === 'GROUNDS_FOUND') {
+      const caseFile = resolution.caseFile;
+      console.log(`Case File Created: [${caseFile.caseId}] for $${caseFile.disputedAmount.toFixed(2)} USD`);
+      console.log(`Reason: ${caseFile.reason}`);
+      console.log(`Summary: ${caseFile.summary}`);
+      console.log(`Copy-Paste Filing Text: "${caseFile.copyPasteFilingText}"`);
 
-    console.log(`\nDefender Agent scoring evidence and evaluating Expected Value (EV)...`);
-    const defenderDecision = await processDisputeDecision(caseFile.caseId, jacketOrder.id, { replayMode: isReplay });
-    console.log(`Evidence Rubric Score (pWin): ${defenderDecision.pWin.toFixed(2)}`);
-    console.log(`EV Contest: $${defenderDecision.evAnalysis.evContest.toFixed(2)} vs EV Accept: $${defenderDecision.evAnalysis.evAccept.toFixed(2)}`);
-    console.log(`Deterministic Decision: ${defenderDecision.decision}`);
-    console.log(`Defender Narrative: ${defenderDecision.narrative}`);
-    console.log(`Settlement Action: ${defenderDecision.actionTaken}`);
-    if (defenderDecision.refundId) {
-      console.log(`Verified Refund ID: ${defenderDecision.refundId}`);
+      console.log(`\nDefender Agent scoring evidence and evaluating Expected Value (EV)...`);
+      const defenderDecision = await processDisputeDecision(caseFile.caseId, jacketOrder.id, { replayMode: isReplay });
+      console.log(`Evidence Rubric Score (pWin): ${defenderDecision.pWin.toFixed(2)}`);
+      console.log(`EV Contest: $${defenderDecision.evAnalysis.evContest.toFixed(2)} vs EV Accept: $${defenderDecision.evAnalysis.evAccept.toFixed(2)}`);
+      console.log(`Deterministic Decision: ${defenderDecision.decision}`);
+      console.log(`Defender Narrative: ${defenderDecision.narrative}`);
+      console.log(`Settlement Action: ${defenderDecision.actionTaken}`);
+      if (defenderDecision.refundId) {
+        console.log(`Verified Refund ID: ${defenderDecision.refundId}`);
+      }
+    } else {
+      console.log(`Resolver Decision: ${resolution.status} - ${resolution.message}`);
     }
   }
 

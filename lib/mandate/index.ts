@@ -40,6 +40,27 @@ export function computeMandateHash(constraints: MandateConstraints): string {
   return computeSha256(canonical);
 }
 
+export async function getPublicJwks() {
+  const keyEnv = process.env.MANDATE_SIGNING_PRIVATE_KEY;
+  if (!keyEnv) return { keys: [] };
+  try {
+    const jwk = JSON.parse(keyEnv);
+    const { d, ...publicJwk } = jwk;
+    return {
+      keys: [
+        {
+          ...publicJwk,
+          kid: 'recourse-mandate-key-1',
+          use: 'sig',
+          alg: 'ES256',
+        },
+      ],
+    };
+  } catch {
+    return { keys: [] };
+  }
+}
+
 let cachedPrivateKey: any = null;
 let cachedPublicKey: any = null;
 
@@ -93,16 +114,6 @@ export async function verifyMandateSignature(signedJws: string): Promise<{ valid
   } catch (err: any) {
     return { valid: false, error: err.message };
   }
-}
-
-export async function getPublicJwks() {
-  const keyEnv = process.env.MANDATE_SIGNING_PRIVATE_KEY;
-  if (!keyEnv) return { keys: [] };
-  const jwk = JSON.parse(keyEnv);
-  const { d, ...publicJwk } = jwk;
-  return {
-    keys: [{ ...publicJwk, use: 'sig', alg: 'ES256' }],
-  };
 }
 
 export async function parseMandateNaturalLanguage(
