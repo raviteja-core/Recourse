@@ -119,3 +119,4 @@ export async function exchangeVaultSetupToken(setupTokenId: string, userId = 'us
     status: data.status,
   };
 }
+

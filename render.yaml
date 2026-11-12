@@ -12,3 +12,4 @@ services:
         value: "true"
       - key: LLM_MODEL
         value: llama-3.3-70b-versatile
+

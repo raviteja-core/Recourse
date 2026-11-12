@@ -1,4 +1,3 @@
-# Recourse Project Status & Build Milestones
 
 ### NEEDS USER
 *(None currently — all user actions completed successfully!)*

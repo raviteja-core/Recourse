@@ -21,8 +21,9 @@ let cachedToken: { value: string; expiresAt: number } | undefined;
 async function accessToken(): Promise<string> {
   if (cachedToken && Date.now() < cachedToken.expiresAt) return cachedToken.value;
 
-  const { PAYPAL_CLIENT_ID: id, PAYPAL_SECRET: secret } = process.env;
-  if (!id || !secret) throw new Error('PAYPAL_CLIENT_ID and PAYPAL_SECRET must be set (see .env.local)');
+  const id = process.env.PAYPAL_CLIENT_ID;
+  const secret = process.env.PAYPAL_CLIENT_SECRET || process.env.PAYPAL_SECRET;
+  if (!id || !secret) throw new Error('PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET (or PAYPAL_SECRET) must be set');
 
   const res = await fetch(`${BASE_URL}/v1/oauth2/token`, {
     method: 'POST',

@@ -82,3 +82,4 @@ export function calculateKpisFromDb(): RecourseKpis {
     disputesCount: guardPathDisputes.length,
   };
 }
+

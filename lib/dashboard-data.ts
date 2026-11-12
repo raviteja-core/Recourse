@@ -278,27 +278,43 @@ function balanceRows({ balances = [] }: Balances) {
 const TRANSACTION_WINDOW_MS = TRANSACTION_SEARCH_MAX_DAYS * DAY_MS;
 
 export async function getDashboardData(asOf = new Date()) {
-  const [products, plans, invoices, transactions, balances] = await Promise.all([
-    listProducts(),
-    listPlans(),
-    listInvoices(),
-    searchTransactions(new Date(asOf.getTime() - TRANSACTION_WINDOW_MS), asOf),
-    getBalances(),
-  ]);
   const today = asOf.toISOString().slice(0, 10);
+  try {
+    const [products, plans, invoices, transactions, balances] = await Promise.all([
+      listProducts(),
+      listPlans(),
+      listInvoices(),
+      searchTransactions(new Date(asOf.getTime() - TRANSACTION_WINDOW_MS), asOf),
+      getBalances(),
+    ]);
 
-  return {
-    asOf: asOf.toISOString(),
-    customers: customerRows(invoices),
-    invoices: invoiceRows(invoices, today),
-    invoiceItems: invoiceItemRows(invoices),
-    invoicePayments: invoicePaymentRows(invoices),
-    products: productRows(products),
-    plans: planRows(plans),
-    transactions: transactionRows(transactions),
-    payouts: payoutRows(transactions),
-    balances: balanceRows(balances),
-  };
+    return {
+      asOf: asOf.toISOString(),
+      customers: customerRows(invoices),
+      invoices: invoiceRows(invoices, today),
+      invoiceItems: invoiceItemRows(invoices),
+      invoicePayments: invoicePaymentRows(invoices),
+      products: productRows(products),
+      plans: planRows(plans),
+      transactions: transactionRows(transactions),
+      payouts: payoutRows(transactions),
+      balances: balanceRows(balances),
+    };
+  } catch (err: any) {
+    console.warn('[DashboardData] PayPal REST fetch unavailable, using fallback:', err.message);
+    return {
+      asOf: asOf.toISOString(),
+      customers: [],
+      invoices: [],
+      invoiceItems: [],
+      invoicePayments: [],
+      products: [],
+      plans: [],
+      transactions: [],
+      payouts: [],
+      balances: [],
+    };
+  }
 }
 
 export type DashboardData = Awaited<ReturnType<typeof getDashboardData>>;

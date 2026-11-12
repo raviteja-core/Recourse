@@ -77,3 +77,4 @@ main().catch((err) => {
   console.error('Vault setup script error:', err.message);
   process.exit(1);
 });
+
