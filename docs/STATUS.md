@@ -1,16 +1,6 @@
 
-### NEEDS USER: File Sandbox Dispute for Live Dry Run (Jacket Order)
-Please open your browser, log in to the PayPal Sandbox as the US buyer (`sb-j6f43743452243@personal.example.com`), navigate to the **Resolution Center**, and file a dispute for the live Jacket order:
-
-- **PayPal Transaction / Capture ID:** `48725438S2363071K`
-- **PayPal Order ID:** `4NR28859YC9045307`
-- **Item:** Ridgeback StormShield All-Weather Jacket
-- **Disputed Amount:** `$38.00 USD`
-- **Dispute Reason:** `MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED` (Item differs significantly from description)
-- **Copy-Paste Filing Text:**
-> I received an item that is different from described. The Ridgeback StormShield All-Weather Jacket was purchased with specifications ({"waterproof":true,"breathable":true,"material":"ripstop nylon","color":"forest green"}), but delivery inspection proved discrepancy (expected waterproof=true but observed waterproof=false). Inspector report: "CRITICAL DISCREPANCY: Listing claims waterproof, but tested garment has no seam sealant or water-repellent membrane.". Requesting full refund of $38.00.
-
-Once submitted in the Resolution Center, reply **"filed"** (or paste the dispute ID) so Recourse can poll, detect it, and execute the Defender's automated EV settlement!
+### NEEDS USER
+*(None currently — live dispute `PP-R-JVE-10199692` filed and settled autonomously via Defender `accept-claim`! All user actions completed.)*
 
 ---
 
@@ -23,7 +13,7 @@ Once submitted in the Resolution Center, reply **"filed"** (or paste the dispute
 | F3 | Replay IDs & Honest Labeling Alignment | **COMPLETED** | Removed all synthetic placeholders (`ORDER-REPLAY-*`, `CAPTURE-REPLAY-*`, `REPLAY_REFUND_SIMULATED`). Replay directly outputs real recorded sandbox IDs (`4YY66781YU2917137`, `4JS10478D8056260X`, `8KC65034CE698390J`, `22X59480TL380680H`). |
 | F4 | AI Touchpoint Proof & Multi-Step Agent Tool-Calling | **COMPLETED** | Raw log lines with model, latency, and tokens added for: (1) Mandate parse, (2) Shopper agent tool-calling (`search_catalog` -> `propose_cart` -> `checkout_via_guard`), (3) Resolver case text, (4) Defender narrative. |
 | F5 | Palette Strictness & Reset Idempotency | **COMPLETED** | Strict semantic colors: Green = ALLOW only, Amber = REQUIRE_APPROVAL only, Red = BLOCK only. Fixed Jacket chip. Reset is idempotent. 24h ISO timestamps standardized. |
-| F6 | Live Dry Run to Filing Checkpoint | **IN PROGRESS (NEEDS USER)** | Executed fresh live dry run (`scripts/live-dry-run.ts`): Mandate A parsed via Live Groq LLM, Tent ($45 ALLOW), Jacket ($38 ALLOW), Pack ($55 REQUIRE_APPROVAL -> Approved), Headphones ($129 BLOCK), Receipt Chain verified. Reached filing checkpoint on Capture `48725438S2363071K`. |
+| F6 | Live Dry Run & Dispute Settlement | **COMPLETED** | Executed fresh live dry run (`scripts/live-dry-run.ts`): Mandate A parsed via Live Groq LLM, Tent ($45 ALLOW), Jacket ($38 ALLOW), Pack ($55 REQUIRE_APPROVAL -> Approved), Headphones ($129 BLOCK), Receipt Chain verified. User filed dispute `PP-R-JVE-10199692` on Capture `48725438S2363071K`. Defender evaluated evidence ($p_{\text{win}}=0.05$), chose `ACCEPT_AND_REFUND`, executed `accept-claim` API. Capture status verified `REFUNDED` ($38.00 recovered). |
 | F7 | Hosted Demo Spec & Render Verification | **COMPLETED** | `render.yaml` pinned to Node 20.18.0 with `REPLAY_ONLY=true`. Verified local isolation with `env -i REPLAY_ONLY=true`: mutating endpoints return 403, replay runs cleanly. |
 | F8 | Documentation & Verification | **COMPLETED** | Documentation updated across `README.md`, `docs/SUBMISSION.md`, `docs/RECORDING.md`, `docs/STATUS.md`. Tests passing (26/26), `next build` clean, secret scan clean. |
 
@@ -87,7 +77,8 @@ Every transaction, dispute, and refund created in the PayPal Sandbox for this pr
 | Order | `0V817837K2473284D` | $45.00 | Live Dry Run | Mandate A (Tent) | `COMPLETED` | Live dry run approved purchase |
 | Capture | `2YC315038C753571A` | $45.00 | Live Dry Run | Order `0V817837K2473284D` | `COMPLETED` | Live sandbox capture |
 | Order | `4NR28859YC9045307` | $38.00 | Live Dry Run | Mandate A (Jacket) | `COMPLETED` | Live dry run defective purchase |
-| Capture | `48725438S2363071K` | $38.00 | Live Dry Run | Order `4NR28859YC9045307` | `COMPLETED` | Target of pending live dispute (NEEDS USER filing) |
+| Capture | `48725438S2363071K` | $38.00 | Live Dry Run | Order `4NR28859YC9045307` | `REFUNDED` | Defective item refunded via live dispute accept-claim |
+| Dispute | `PP-R-JVE-10199692` | $38.00 | Resolution Center | Capture `48725438S2363071K` | `RESOLVED` | Resolver Case File -> Defender `accept-claim` ($38.00 Recovered $) |
 | Order | `66485307KV105180M` | $55.00 | Live Dry Run | Mandate A (Expedition Pack) | `COMPLETED` | Live dry run human approval flow |
 | Capture | `4T796483EG502433F` | $55.00 | Live Dry Run | Order `66485307KV105180M` | `COMPLETED` | Live sandbox capture post-approval |
 

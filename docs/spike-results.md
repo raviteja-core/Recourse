@@ -165,6 +165,31 @@ This document records the actual behavior, request/response shapes, field struct
 
 ---
 
+## Live Dry Run Dispute Settlement Verification: Jacket Dispute (`PP-R-JVE-10199692`)
+*Status: COMPLETED (Verified live against PayPal Sandbox)*
+
+- **Dispute ID:** `PP-R-JVE-10199692`
+- **Target Transaction:** Capture `48725438S2363071K` (Order `4NR28859YC9045307`, Ridgeback StormShield All-Weather Jacket, $38.00 USD)
+- **Buyer Ground:** User submitted a live buyer dispute: *"I received an item that is different from described. The Ridgeback StormShield All-Weather Jacket was purchased with specifications ({"waterproof":true,"breathable":true,"material":"ripstop nylon","color":"forest green"}), but delivery inspection proved discrepancy (expected waterproof=true but observed waterproof=false). Inspector report: "CRITICAL DISCREPANCY: Listing claims waterproof, but tested garment has no seam sealant or water-repellent membrane.". Requesting full refund of $38.00."*
+- **Resolver Evaluation:** Returned `GROUNDS_FOUND` (`DEFECTIVE_NOT_AS_DESCRIBED`). Stored delivery inspection confirmed fabric test failure and missing waterproof membrane.
+- **Defender Evidence Scoring & EV:**
+  - $p_{\text{win}} = 0.05$ (delivery inspection corroborates buyer claim: defect verified).
+  - $\text{EV}_{\text{contest}} = -\$48.45$ vs $\text{EV}_{\text{accept}} = -\$38.00$ (modeled dispute handling fee: $15.00).
+  - Deterministic Policy: `ACCEPT_AND_REFUND`.
+- **Live Groq LLM Narrative:**
+  `"Given the 5 % chance of a successful contest, the expected value of fighting the claim (EV(contest) = -$48.45) is substantially lower than the expected value of accepting the refund (EV(accept) = -$38.00, after accounting for the $15 dispute-handling fee), making acceptance the mathematically optimal choice under the EV policy. Moreover, the mandate authorization and carrier delivery are verified, while the sandbox soak-test confirms a product defect, providing clear legal grounds to honor the buyer’s refund request."`
+- **Action Taken:** `POST /v1/customer/disputes/PP-R-JVE-10199692/accept-claim` (`200 OK`).
+- **Two-Way Outcome Verification:**
+  1. **Dispute Status (`GET /v1/customer/disputes/PP-R-JVE-10199692`):**
+     - `status`: `"UNDER_REVIEW"` (auto-transitioning post accept-claim)
+     - `dispute_life_cycle_stage`: `"INQUIRY"`
+  2. **Capture Status (`GET /v2/payments/captures/48725438S2363071K`):**
+     - `status`: `"REFUNDED"`
+     - Gross Refunded: `$38.00 USD`, PayPal fee reversed: `$1.82 USD`, Net: `$36.18 USD`.
+- **Accounting:** Tracked as **Recovered $38.00**.
+
+---
+
 ## Spike 3: Webhook Registration & Verification (`scripts/spike-3-webhooks.ts`)
 *Status: Pending Phase 1 execution*
 
