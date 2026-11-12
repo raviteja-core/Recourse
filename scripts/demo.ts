@@ -216,7 +216,11 @@ async function main() {
   if (tentOrder) {
     console.log(`Resolver Agent inspecting order ${tentOrder.id} (Capture: ${tentOrder.paypal_capture_id})...`);
     const tentResolution = generateResolverCaseFile(tentOrder.id);
-    console.log(`Resolver Assessment: ${tentResolution.status} - ${tentResolution.message}`);
+    if (tentResolution.status === 'NO_GROUNDS') {
+      console.log(`Resolver Assessment: ${tentResolution.status} - ${tentResolution.message}`);
+    } else {
+      console.log(`Resolver Assessment: ${tentResolution.status}`);
+    }
     console.log('Resolver confirms item was delivered in pristine condition matching listing. No buyer grounds for claim.');
 
     console.log(`Simulating Dispute Filed in Resolution Center on Capture ${tentOrder.paypal_capture_id} ($45.00)...`);

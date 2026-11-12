@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: recourse
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: REPLAY_ONLY
+        value: "true"
+      - key: LLM_MODEL
+        value: llama-3.3-70b-versatile

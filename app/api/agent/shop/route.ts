@@ -8,10 +8,10 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { mandateId, productSkus, rationale, replayMode } = body;
 
-    if (!mandateId || !productSkus || !Array.isArray(productSkus)) {
+    if (process.env.REPLAY_ONLY === 'true' && !replayMode) {
       return NextResponse.json(
-        { error: 'mandateId and productSkus array are required' },
-        { status: 400 }
+        { error: 'Live PayPal Sandbox checkout is disabled in hosted Replay-Only mode. Please use replay mode or run locally with sandbox credentials.' },
+        { status: 403 }
       );
     }
 

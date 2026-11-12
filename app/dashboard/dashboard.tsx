@@ -10,7 +10,7 @@
 // Nothing tracks edits as they happen. Save reads the report from Studio with getState(), and
 // leaving a report compares Studio's state with the saved one there and then.
 
-import { useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   AgStudioAiModule,
   enableStudioDevValidations,
@@ -30,6 +30,7 @@ import {
 } from './components/dialogs';
 import { EmptyData } from './components/empty-data';
 import { ReportHeader } from './components/report-header';
+import { RecourseSafetyNetView } from './components/RecourseSafetyNetView';
 import {
   blankReport,
   copyOf,
@@ -68,16 +69,21 @@ const NO_HISTORY: StudioHistory = { canUndo: false, canRedo: false };
 const noSubscription = () => () => {};
 
 export function Dashboard(props: DashboardProps) {
-  // Saved reports live in localStorage, which only exists in the browser.
-  const inBrowser = useSyncExternalStore(
-    noSubscription,
-    () => true,
-    () => false,
-  );
-  return inBrowser ? <ReportsDashboard {...props} /> : <DashboardSkeleton />;
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <DashboardSkeleton />;
+  }
+
+  return <ReportsDashboard {...props} />;
 }
 
 function ReportsDashboard({ data, licenseKey, aiModels }: DashboardProps) {
+  const [viewMode, setViewMode] = useState<'safety-net' | 'studio'>('safety-net');
   const { store, latest, update, editReport } = useReports();
   const apiRef = useRef<AgStudioApi | null>(null);
 
@@ -238,54 +244,92 @@ function ReportsDashboard({ data, licenseKey, aiModels }: DashboardProps) {
         />
       }
     >
-      <ReportHeader
-        reportName={saved.name}
-        pageTitle={pages.find((p) => p.id === state.selectedPageId)?.title}
-        asOf={data.asOf}
-        editing={editing}
-        pageIsEmpty={studioState !== null && !reportState.pageHasWidgets(state)}
-        canUndo={history.canUndo}
-        canRedo={history.canRedo}
-        onUndo={() => apiRef.current?.undo()}
-        onRedo={() => apiRef.current?.redo()}
-        onSave={save}
-        onDiscard={discard}
-        onEditingChange={(next) =>
-          next ? changeMode('edit') : guard(() => changeMode('view'))
-        }
-      />
+      {/* View Switcher Bar */}
+      <div className="flex shrink-0 items-center justify-between border-b border-pp-border bg-white px-6 py-2.5">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setViewMode('safety-net')}
+            className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+              viewMode === 'safety-net'
+                ? 'bg-pp-navy text-white shadow-sm'
+                : 'text-pp-muted hover:bg-pp-highlight hover:text-pp-navy'
+            }`}
+          >
+            🛡 Recourse Safety Net Operations
+          </button>
+          <button
+            onClick={() => setViewMode('studio')}
+            className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
+              viewMode === 'studio'
+                ? 'bg-pp-navy text-white shadow-sm'
+                : 'text-pp-muted hover:bg-pp-highlight hover:text-pp-navy'
+            }`}
+          >
+            📊 AG Studio Analytics Explorer
+          </button>
+        </div>
 
-      <div className="min-h-0 flex-1">
-        {hasData(data) ? (
-          <AgStudioProvider licenseKey={licenseKey} modules={ai ? [AgStudioAiModule] : undefined}>
-            <AgStudio
-              style={{ height: '100%', width: '100%' }}
-              theme={agStudioPayPalTheme}
-              layout={{ widgetBorderEnabled: true }}
-              data={studioData}
-              ai={ai}
-              initialState={initialState}
-              mode={mode}
-              onApiReady={(event) => {
-                apiRef.current = event.api;
-              }}
-              onStudioReady={(event) => {
-                const current = event.api.getState();
-                console.log('[AG Studio] initial state', current);
-                setStudioState(current);
-              }}
-              onStateUpdated={(event) => {
-                console.log('[AG Studio] state updated', event.state);
-                const { undo, redo } = event.api.getHistory();
-                setStudioState(event.state);
-                setHistory({ canUndo: undo.length > 0, canRedo: redo.length > 0 });
-              }}
-            />
-          </AgStudioProvider>
-        ) : (
-          <EmptyData />
-        )}
+        <div className="text-xs text-pp-muted">
+          {viewMode === 'safety-net' ? 'Live AG Grid & Safety Net KPIs' : 'Interactive AG Studio Report Builder'}
+        </div>
       </div>
+
+      {viewMode === 'safety-net' ? (
+        <div className="flex-1 overflow-y-auto bg-pp-canvas">
+          <RecourseSafetyNetView />
+        </div>
+      ) : (
+        <>
+          <ReportHeader
+            reportName={saved.name}
+            pageTitle={pages.find((p) => p.id === state.selectedPageId)?.title}
+            asOf={data.asOf}
+            editing={editing}
+            pageIsEmpty={studioState !== null && !reportState.pageHasWidgets(state)}
+            canUndo={history.canUndo}
+            canRedo={history.canRedo}
+            onUndo={() => apiRef.current?.undo()}
+            onRedo={() => apiRef.current?.redo()}
+            onSave={save}
+            onDiscard={discard}
+            onEditingChange={(next) =>
+              next ? changeMode('edit') : guard(() => changeMode('view'))
+            }
+          />
+
+          <div className="min-h-0 flex-1">
+            {hasData(data) ? (
+              <AgStudioProvider licenseKey={licenseKey} modules={ai ? [AgStudioAiModule] : undefined}>
+                <AgStudio
+                  style={{ height: '100%', width: '100%' }}
+                  theme={agStudioPayPalTheme}
+                  layout={{ widgetBorderEnabled: true }}
+                  data={studioData}
+                  ai={ai}
+                  initialState={initialState}
+                  mode={mode}
+                  onApiReady={(event) => {
+                    apiRef.current = event.api;
+                  }}
+                  onStudioReady={(event) => {
+                    const current = event.api.getState();
+                    console.log('[AG Studio] initial state', current);
+                    setStudioState(current);
+                  }}
+                  onStateUpdated={(event) => {
+                    console.log('[AG Studio] state updated', event.state);
+                    const { undo, redo } = event.api.getHistory();
+                    setStudioState(event.state);
+                    setHistory({ canUndo: undo.length > 0, canRedo: redo.length > 0 });
+                  }}
+                />
+              </AgStudioProvider>
+            ) : (
+              <EmptyData />
+            )}
+          </div>
+        </>
+      )}
 
       <UnsavedChangesDialog
         open={dialog?.kind === 'unsaved'}

@@ -47,8 +47,10 @@ async function main() {
   if (order) {
     const resolverAssessment = generateResolverCaseFile(order.id);
     console.log(`Resolver Status : ${resolverAssessment.status}`);
-    console.log(`Resolver Reason : ${(resolverAssessment as any).reason}`);
-    console.log(`Resolver Message: ${resolverAssessment.message}`);
+    if (resolverAssessment.status === 'NO_GROUNDS') {
+      console.log(`Resolver Reason : ${resolverAssessment.reason}`);
+      console.log(`Resolver Message: ${resolverAssessment.message}`);
+    }
     console.log('Verified: Resolver finds NO_GROUNDS for buyer claim (item delivered in pristine condition).');
   }
 

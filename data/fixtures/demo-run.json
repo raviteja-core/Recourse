@@ -1,17 +1,17 @@
 {
   "mandate": {
-    "id": "mandate-a-1794445918649",
+    "id": "mandate-a-1794447335625",
     "user_id": "user-1",
     "nl_text": "Up to $150 on outdoor and camping gear from Larkspur Outdoors and Ridgeback Gear Co. Max $60 per purchase. Ask me before anything over $50. Expires in 7 days.",
-    "constraints_json": "{\"currency\":\"USD\",\"totalCap\":150,\"perPurchaseCap\":60,\"approvalThreshold\":50,\"categoriesAllow\":[\"outdoor\",\"camping\"],\"merchantsAllow\":[\"larkspur\",\"ridgeback\"],\"expiresAt\":\"2026-11-19T01:11:57.140Z\",\"requireTracking\":false}",
+    "constraints_json": "{\"currency\":\"USD\",\"totalCap\":150,\"perPurchaseCap\":60,\"approvalThreshold\":50,\"categoriesAllow\":[\"outdoor\",\"camping\"],\"merchantsAllow\":[\"larkspur\",\"ridgeback\"],\"expiresAt\":\"2026-11-19T01:35:33.976Z\",\"requireTracking\":false}",
     "status": "active",
     "signed_jws": "[REDACTED_JWS]",
-    "hash": "1bf1243347d65130eac8141aa2648378d9fd22d5ec28448522b8443e5a4c59f3",
-    "created_at": "2026-11-12T01:11:57.140Z",
-    "expires_at": "2026-11-19T01:11:57.140Z",
+    "hash": "c63d30e7e6b95a15fa66cae758c8bb59734b3a54518c5ff82f756319288b0f5a",
+    "created_at": "2026-11-12T01:35:33.976Z",
+    "expires_at": "2026-11-19T01:35:33.976Z",
     "spent_total": 138
   },
   "receiptsCount": 3,
   "spentTotal": 138,
-  "verifiedAt": "2026-11-12T01:11:58.745Z"
+  "verifiedAt": "2026-11-12T01:35:35.678Z"
 }
