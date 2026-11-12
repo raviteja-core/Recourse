@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { getDb } from '../db';
 import { getCurrentVirtualTime } from '../merchants/fulfillment';
+import { createGroq } from '@ai-sdk/groq';
+import { generateText } from 'ai';
 
 export const CaseFileSchema = z.object({
   caseId: z.string(),
@@ -47,7 +49,7 @@ export const CaseFileResolutionSchema = z.discriminatedUnion('status', [
 
 export type CaseFileResolution = z.infer<typeof CaseFileResolutionSchema>;
 
-export function generateResolverCaseFile(orderId: string): CaseFileResolution {
+export async function generateResolverCaseFile(orderId: string): Promise<CaseFileResolution> {
   const db = getDb();
   const order = db.prepare('SELECT * FROM orders WHERE id = ?').get(orderId) as any;
   if (!order) throw new Error(`Order ${orderId} not found`);
@@ -139,6 +141,42 @@ export function generateResolverCaseFile(orderId: string): CaseFileResolution {
     facts.push(`Tamper-evident receipt hash ${receipt?.hash?.slice(0, 16)}... cryptographic lock verified.`);
 
     copyPasteFilingText = `I received an item that is different from described. The ${primaryItem.title} was purchased with specifications (${JSON.stringify(attributesAtPurchase)}), but delivery inspection proved discrepancy (${discrepancyStr}). Inspector report: "${inspectorNotes}". Requesting full refund of $${order.amount.toFixed(2)}.`;
+  }
+
+  const groqApiKey = process.env.GROQ_API_KEY || process.env.LLM_API_KEY;
+  const modelName = process.env.LLM_MODEL || 'openai/gpt-oss-120b';
+
+  if (groqApiKey && !process.env.FORCE_FALLBACK) {
+    try {
+      const start = Date.now();
+      const groqProvider = createGroq({ apiKey: groqApiKey });
+      const prompt = `You are the Recourse Buyer Dispute Resolver Agent.
+A purchase defect was detected for order ${orderId} (${primaryItem.title}, $${order.amount.toFixed(2)} USD).
+Reason: ${reason}.
+Purchase specifications: ${JSON.stringify(attributesAtPurchase)}.
+Observed inspection attributes: ${JSON.stringify(observedAttributes)}.
+Inspector notes: "${inspectorNotes}".
+Cryptographic receipt hash: ${receipt?.hash}.
+
+Write a formal 2-3 sentence dispute filing statement to be submitted into PayPal Resolution Center requesting a full refund of $${order.amount.toFixed(2)} USD. Reference the specification mismatch and receipt hash.`;
+
+      const result = await generateText({
+        model: groqProvider(modelName),
+        prompt,
+      });
+
+      const latencyMs = Date.now() - start;
+      const usage = result.usage || { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+      console.log(
+        `[AI:Resolver] Model: ${modelName} | Latency: ${latencyMs}ms | Tokens: prompt=${usage.promptTokens}, completion=${usage.completionTokens}, total=${usage.totalTokens}`
+      );
+
+      if (result.text?.trim()) {
+        copyPasteFilingText = result.text.trim();
+      }
+    } catch (err: any) {
+      console.warn('Groq Resolver case text generation failed, using deterministic template:', err.message);
+    }
   }
 
   const caseFile: CaseFile = {

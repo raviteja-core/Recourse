@@ -13,6 +13,13 @@ export async function POST(
     const reason = body.reason || 'Approved by user via Recourse Console';
     const replayMode = Boolean(body.replayMode);
 
+    if (process.env.REPLAY_ONLY === 'true' && !replayMode) {
+      return NextResponse.json(
+        { error: 'Live PayPal Sandbox checkout is disabled in hosted Replay-Only mode.' },
+        { status: 403 }
+      );
+    }
+
     // 1. Record human approval
     approveCartProposal(id, reason);
 

@@ -178,7 +178,7 @@ async function main() {
 
   if (jacketOrder) {
     console.log(`Resolver Agent inspecting order ${jacketOrder.id} (Capture: ${jacketOrder.paypal_capture_id})...`);
-    const resolution = generateResolverCaseFile(jacketOrder.id);
+    const resolution = await generateResolverCaseFile(jacketOrder.id);
     if (resolution.status === 'GROUNDS_FOUND') {
       const caseFile = resolution.caseFile;
       console.log(`Case File Created: [${caseFile.caseId}] for $${caseFile.disputedAmount.toFixed(2)} USD`);
@@ -215,7 +215,7 @@ async function main() {
 
   if (tentOrder) {
     console.log(`Resolver Agent inspecting order ${tentOrder.id} (Capture: ${tentOrder.paypal_capture_id})...`);
-    const tentResolution = generateResolverCaseFile(tentOrder.id);
+    const tentResolution = await generateResolverCaseFile(tentOrder.id);
     if (tentResolution.status === 'NO_GROUNDS') {
       console.log(`Resolver Assessment: ${tentResolution.status} - ${tentResolution.message}`);
     } else {

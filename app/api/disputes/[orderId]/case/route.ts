@@ -9,7 +9,7 @@ export async function GET(
 ) {
   try {
     const { orderId } = await params;
-    const resolution = generateResolverCaseFile(orderId);
+    const resolution = await generateResolverCaseFile(orderId);
     return NextResponse.json(resolution);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

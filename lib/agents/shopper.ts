@@ -2,6 +2,9 @@ import { getDb } from '../db';
 import { SEED_PRODUCTS, Product } from '../merchants/catalog';
 import { checkoutGuardedCart, CheckoutResult } from '../paypal/orders';
 import { getCurrentVirtualTime } from '../merchants/fulfillment';
+import { createGroq } from '@ai-sdk/groq';
+import { generateText, tool } from 'ai';
+import { z } from 'zod';
 
 export interface ShoppingProposal {
   cartId: string;
@@ -128,4 +131,163 @@ export function rejectCartProposal(cartId: string, reason?: string) {
     reason || 'User rejected purchase in Recourse Control Tower.',
     virtualTime.toISOString()
   );
+}
+
+export interface ShopperAgentResult {
+  cartId: string;
+  checkoutResult?: CheckoutResult;
+  toolCallsExecuted: string[];
+  latencyMs?: number;
+  tokens?: any;
+  model?: string;
+  isFallback: boolean;
+}
+
+export async function runAiShopperAgent(
+  userGoal: string,
+  mandateId: string,
+  options: { replayMode?: boolean; vaultTokenId?: string } = {}
+): Promise<ShopperAgentResult> {
+  const db = getDb();
+  const virtualTime = getCurrentVirtualTime();
+  const groqApiKey = process.env.GROQ_API_KEY || process.env.LLM_API_KEY;
+  const modelName = process.env.LLM_MODEL || 'openai/gpt-oss-120b';
+  const toolCallsExecuted: string[] = [];
+
+  let createdCartId: string | undefined;
+  let finalCheckoutResult: CheckoutResult | undefined;
+
+  if (groqApiKey && !process.env.FORCE_FALLBACK && !options.replayMode) {
+    try {
+      const start = Date.now();
+      const groqProvider = createGroq({ apiKey: groqApiKey });
+
+      const tools = {
+        search_catalog: tool({
+          description: 'Search available merchant catalogs for products matching user request.',
+          parameters: z.object({
+            query: z.string().describe('Search query keyword (e.g. tent, jacket, backpack, headphones)'),
+          }),
+          execute: async ({ query }) => {
+            toolCallsExecuted.push('search_catalog');
+            const q = query.toLowerCase();
+            const matches = SEED_PRODUCTS.filter(
+              (p) =>
+                p.title.toLowerCase().includes(q) ||
+                p.category.toLowerCase().includes(q) ||
+                p.description.toLowerCase().includes(q)
+            );
+            db.prepare(`
+              INSERT INTO agent_events (id, actor, type, payload_json, reasoning_text, created_at)
+              VALUES (?, ?, ?, ?, ?, ?)
+            `).run(
+              `evt-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+              'shopper',
+              'TOOL_CALL:search_catalog',
+              JSON.stringify({ query, foundCount: matches.length }),
+              `Shopper queried catalog for "${query}", matched ${matches.length} products.`,
+              virtualTime.toISOString()
+            );
+            return matches.map((m) => ({
+              id: m.id,
+              title: m.title,
+              merchantId: m.merchantId,
+              price: m.price,
+              category: m.category,
+            }));
+          },
+        }),
+        propose_cart: tool({
+          description: 'Propose a shopping cart for a selected product to check against Mandate Guard.',
+          parameters: z.object({
+            productId: z.string().describe('ID of the product from search_catalog (e.g. tent-1, jacket-1, pack-1, headphones-1)'),
+            rationale: z.string().describe('Why this product satisfies the user shopping goal'),
+          }),
+          execute: async ({ productId, rationale }) => {
+            toolCallsExecuted.push('propose_cart');
+            const proposal = createCartProposal(mandateId, [productId], rationale);
+            createdCartId = proposal.cartId;
+            return {
+              cartId: proposal.cartId,
+              total: proposal.total,
+              merchantId: proposal.merchantId,
+              item: proposal.items[0]?.title,
+            };
+          },
+        }),
+        checkout_via_guard: tool({
+          description: 'Execute checkout through the deterministic Mandate Guard.',
+          parameters: z.object({
+            cartId: z.string().describe('Cart ID returned by propose_cart'),
+          }),
+          execute: async ({ cartId }) => {
+            toolCallsExecuted.push('checkout_via_guard');
+            const res = await executeShopperOrder(cartId, options);
+            finalCheckoutResult = res;
+            return {
+              decision: res.guardResult.decision,
+              reasons: res.guardResult.reasons,
+              explanation: res.guardResult.explanation,
+              success: res.success,
+              requireApproval: res.requireApproval,
+              paypalCaptureId: res.captureId,
+            };
+          },
+        }),
+      };
+
+      const result = await generateText({
+        model: groqProvider(modelName),
+        tools,
+        maxSteps: 5,
+        prompt: `You are the Recourse Autonomous Shopping Agent.
+Your goal: "${userGoal}".
+Mandate ID: "${mandateId}".
+
+Workflow instructions:
+1. Search the catalog using tool 'search_catalog' to find the relevant product.
+2. Formulate a cart proposal using tool 'propose_cart'.
+3. Submit the cart to the deterministic Mandate Guard using 'checkout_via_guard'.
+Follow this 3-step sequence strictly.`,
+      });
+
+      const latencyMs = Date.now() - start;
+      const usage = result.usage || { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+      console.log(
+        `[AI:Shopper] Model: ${modelName} | Latency: ${latencyMs}ms | Tokens: prompt=${usage.promptTokens}, completion=${usage.completionTokens}, total=${usage.totalTokens} | ToolCalls: ${toolCallsExecuted.join(' -> ')}`
+      );
+
+      if (createdCartId) {
+        return {
+          cartId: createdCartId,
+          checkoutResult: finalCheckoutResult,
+          toolCallsExecuted,
+          latencyMs,
+          tokens: usage,
+          model: modelName,
+          isFallback: false,
+        };
+      }
+    } catch (err: any) {
+      console.warn('Live Groq Shopper Agent failed, falling back to deterministic flow:', err.message);
+    }
+  }
+
+  // Deterministic Fallback Flow (e.g. for replay or if tool calling fails)
+  let targetProductId = 'tent-1';
+  if (userGoal.toLowerCase().includes('jacket')) targetProductId = 'jacket-1';
+  else if (userGoal.toLowerCase().includes('pack')) targetProductId = 'pack-1';
+  else if (userGoal.toLowerCase().includes('headphone')) targetProductId = 'headphones-1';
+  else if (userGoal.toLowerCase().includes('stove')) targetProductId = 'stove-1';
+
+  toolCallsExecuted.push('search_catalog', 'propose_cart', 'checkout_via_guard');
+  const proposal = createCartProposal(mandateId, [targetProductId], `Shopper agent selected ${targetProductId} for goal: "${userGoal}"`);
+  const checkoutResult = await executeShopperOrder(proposal.cartId, options);
+
+  return {
+    cartId: proposal.cartId,
+    checkoutResult,
+    toolCallsExecuted,
+    isFallback: true,
+  };
 }

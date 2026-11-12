@@ -138,9 +138,21 @@ export async function checkoutGuardedCart(
   let paypalCaptureId: string;
 
   if (options.replayMode) {
-    // Deterministic replay fixture
-    paypalOrderId = `ORDER-REPLAY-${Date.now().toString().slice(-6)}`;
-    paypalCaptureId = `CAPTURE-REPLAY-${Date.now().toString().slice(-6)}`;
+    // Real recorded sandbox IDs from fixtures
+    const primarySku = cartItems[0]?.sku || '';
+    if (primarySku.includes('tent')) {
+      paypalOrderId = '4YY66781YU2917137';
+      paypalCaptureId = '7BH91632Y92698500';
+    } else if (primarySku.includes('jacket')) {
+      paypalOrderId = '4JS10478D8056260X';
+      paypalCaptureId = '24185227UU994700W';
+    } else if (primarySku.includes('pack')) {
+      paypalOrderId = '8KC65034CE698390J';
+      paypalCaptureId = '4LE12533XH788181M';
+    } else {
+      paypalOrderId = `ORDER-RECORDED-${cartRow.id.slice(-6)}`;
+      paypalCaptureId = `CAPTURE-RECORDED-${cartRow.id.slice(-6)}`;
+    }
   } else {
     // Live PayPal Sandbox Checkout
     const userRow = db.prepare('SELECT vault_token_id FROM users WHERE id = ?').get(mandateRow.user_id) as any;

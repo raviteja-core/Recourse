@@ -145,12 +145,16 @@ Output schema rules:
 - requireTracking: boolean
 `;
 
+      const start = Date.now();
       const groqProvider = createGroq({ apiKey: groqApiKey });
       const result = await generateObject({
         model: groqProvider(modelName),
         schema: MandateConstraintsSchema,
         prompt,
       });
+      const latencyMs = Date.now() - start;
+      const usage = result.usage || { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
+      console.log(`[AI:MandateParse] Model: ${modelName} | Latency: ${latencyMs}ms | Tokens: prompt=${usage.promptTokens}, completion=${usage.completionTokens}, total=${usage.totalTokens}`);
 
       return { constraints: result.object, isFallback: false };
     } catch (err: any) {

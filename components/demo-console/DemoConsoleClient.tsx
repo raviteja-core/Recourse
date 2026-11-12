@@ -363,7 +363,7 @@ export function DemoConsoleClient({
             <svg className="w-3.5 h-3.5 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
             </svg>
-            AG Studio Dashboard
+            Operations Dashboard (AG Grid)
           </Link>
 
           <button
@@ -428,9 +428,9 @@ export function DemoConsoleClient({
             <div className="flex items-center justify-between border-b border-slate-800 pb-2 mb-2.5">
               <div className="flex items-center gap-2">
                 <span className="flex h-5 w-5 items-center justify-center rounded-full bg-teal-500/20 text-teal-300 text-xs font-bold">2</span>
-                <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">Shopper Scenarios</span>
+                <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">AI Shopper Agent</span>
               </div>
-              <span className="text-[10px] text-slate-400 font-mono">Guard Pure Check</span>
+              <span className="text-[10px] text-teal-400 font-mono">Tool-Calling Flow</span>
             </div>
 
             <div className="space-y-2">
@@ -444,7 +444,33 @@ export function DemoConsoleClient({
                   <div className="text-xs font-bold text-emerald-300 group-hover:text-emerald-200">Approved purchase</div>
                   <div className="text-[10px] text-slate-400">Larkspur Trail 2-Person Tent ($45.00)</div>
                 </div>
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">ALLOW</span>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">ALLOW</span>
+              </button>
+
+              {/* Defect purchase: Jacket */}
+              <button
+                onClick={() => handleRunCart('jacket')}
+                disabled={loadingAction?.startsWith('cart-')}
+                className="w-full flex items-center justify-between rounded-lg border border-emerald-500/30 bg-emerald-950/20 hover:bg-emerald-950/40 p-2 text-left transition group"
+              >
+                <div>
+                  <div className="text-xs font-bold text-emerald-300 group-hover:text-emerald-200">Item not as described</div>
+                  <div className="text-[10px] text-slate-400">Ridgeback Jacket ($38.00, defective)</div>
+                </div>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">ALLOW</span>
+              </button>
+
+              {/* Human approval: Pack */}
+              <button
+                onClick={() => handleRunCart('pack')}
+                disabled={loadingAction?.startsWith('cart-')}
+                className="w-full flex items-center justify-between rounded-lg border border-amber-500/30 bg-amber-950/20 hover:bg-amber-950/40 p-2 text-left transition group"
+              >
+                <div>
+                  <div className="text-xs font-bold text-amber-300 group-hover:text-amber-200">Human approval flow</div>
+                  <div className="text-[10px] text-slate-400">Expedition Pack ($55.00 &gt; $50 threshold)</div>
+                </div>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">REQUIRE_APPROVAL</span>
               </button>
 
               {/* Blocked purchase: Headphones */}
@@ -457,33 +483,7 @@ export function DemoConsoleClient({
                   <div className="text-xs font-bold text-rose-300 group-hover:text-rose-200">Blocked purchase</div>
                   <div className="text-[10px] text-slate-400">AudioPro Headphones ($129.00)</div>
                 </div>
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300">BLOCK</span>
-              </button>
-
-              {/* Defect purchase: Jacket */}
-              <button
-                onClick={() => handleRunCart('jacket')}
-                disabled={loadingAction?.startsWith('cart-')}
-                className="w-full flex items-center justify-between rounded-lg border border-amber-500/30 bg-amber-950/20 hover:bg-amber-950/40 p-2 text-left transition group"
-              >
-                <div>
-                  <div className="text-xs font-bold text-amber-300 group-hover:text-amber-200">Item not as described</div>
-                  <div className="text-[10px] text-slate-400">Ridgeback Jacket ($38.00, defective)</div>
-                </div>
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">ALLOW</span>
-              </button>
-
-              {/* Human approval: Pack */}
-              <button
-                onClick={() => handleRunCart('pack')}
-                disabled={loadingAction?.startsWith('cart-')}
-                className="w-full flex items-center justify-between rounded-lg border border-purple-500/30 bg-purple-950/20 hover:bg-purple-950/40 p-2 text-left transition group"
-              >
-                <div>
-                  <div className="text-xs font-bold text-purple-300 group-hover:text-purple-200">Human approval flow</div>
-                  <div className="text-[10px] text-slate-400">Expedition Pack ($55.00 &gt; $50 cap)</div>
-                </div>
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">APPROVAL</span>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40">BLOCK</span>
               </button>
             </div>
           </div>

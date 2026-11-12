@@ -45,7 +45,7 @@ async function main() {
 
   console.log(`\n2. Resolver Assessment for Order ${order?.id || 'ord-tent-1'}:`);
   if (order) {
-    const resolverAssessment = generateResolverCaseFile(order.id);
+    const resolverAssessment = await generateResolverCaseFile(order.id);
     console.log(`Resolver Status : ${resolverAssessment.status}`);
     if (resolverAssessment.status === 'NO_GROUNDS') {
       console.log(`Resolver Reason : ${resolverAssessment.reason}`);

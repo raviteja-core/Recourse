@@ -10,6 +10,7 @@ export async function GET() {
       SELECT c.*, m.name as merchantName
       FROM carts c
       LEFT JOIN merchants m ON c.merchant_id = m.id
+      WHERE c.mandate_id = (SELECT id FROM mandates ORDER BY rowid DESC LIMIT 1)
       ORDER BY c.rowid ASC
     `).all() as any[];
 
@@ -33,4 +34,3 @@ export async function GET() {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-

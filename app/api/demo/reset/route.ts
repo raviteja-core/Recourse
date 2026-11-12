@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getDb } from '@/lib/db';
 import { SEED_MERCHANTS, SEED_PRODUCTS } from '@/lib/merchants/catalog';
 import { setVirtualTime } from '@/lib/merchants/fulfillment';
+import { parseMandateNaturalLanguage, signMandate } from '@/lib/mandate';
 
 export const dynamic = 'force-dynamic';
 
@@ -62,13 +63,45 @@ export async function POST() {
     const now = new Date();
     setVirtualTime(now);
 
+    // Seed fresh active Mandate A immediately
+    const mandateText =
+      'Up to $150 on outdoor and camping gear from Larkspur Outdoors and Ridgeback Gear Co. Max $60 per purchase. Ask me before anything over $50. Expires in 7 days.';
+    const constraints = {
+      currency: 'USD' as const,
+      totalCap: 150.0,
+      perPurchaseCap: 60.0,
+      approvalThreshold: 50.0,
+      categoriesAllow: ['outdoor', 'camping'],
+      merchantsAllow: ['larkspur', 'ridgeback'],
+      expiresAt: new Date(now.getTime() + 7 * 24 * 3600 * 1000).toISOString(),
+      requireTracking: true,
+    };
+    const { signedJws, hash } = await signMandate(constraints);
+    const mandateId = `mandate-${Date.now()}`;
+
+    db.prepare(`
+      INSERT INTO mandates (id, user_id, nl_text, constraints_json, status, signed_jws, hash, created_at, expires_at, spent_total)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      mandateId,
+      'user-1',
+      mandateText,
+      JSON.stringify(constraints),
+      'active',
+      signedJws,
+      hash,
+      now.toISOString(),
+      constraints.expiresAt,
+      0.0
+    );
+
     return NextResponse.json({
       success: true,
-      message: 'Database reset and seeded with initial demo state.',
+      message: 'Database reset, fresh Mandate A initialized, and clean state created.',
+      mandateId,
       virtualTime: now.toISOString(),
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
-
