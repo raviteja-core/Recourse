@@ -184,5 +184,150 @@
         }
       ]
     }
+  },
+  "contestedTentClaim": {
+    "disputeId": "PP-R-RGO-10199647",
+    "captureId": "7BH91632Y92698500",
+    "reason": "MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED",
+    "status": "WAITING_FOR_BUYER_RESPONSE",
+    "stage": "INQUIRY",
+    "disputedAmount": 45,
+    "pWin": 0.95,
+    "decision": "CONTEST",
+    "defenseStatement": "Mandate JWS verified (hash: 1bf1243347d65130...). Deterministic Guard ALLOW. Receipt bundle cryptographically locked at purchase (SHA-256: a5bddaf6d6206cee...). Simulated delivery record (sandbox): carrier USPS, tracking 940016136261526288224, status DELIVERED, condition PRISTINE.",
+    "label": "recorded sandbox data",
+    "submittedAt": "2026-11-12T01:13:37.801Z",
+    "displayStatus": "evidence submitted, under PayPal review (sandbox cannot adjudicate)",
+    "dispute": {
+      "dispute_id": "PP-R-RGO-10199647",
+      "create_time": "2026-11-12T00:59:16.322Z",
+      "update_time": "2026-11-12T01:13:23.659Z",
+      "disputed_transactions": [
+        {
+          "buyer_transaction_id": "8RH936002D152231J",
+          "seller_transaction_id": "7BH91632Y92698500",
+          "create_time": "2026-11-07T14:28:11.000Z",
+          "transaction_status": "HELD",
+          "gross_amount": {
+            "currency_code": "USD",
+            "value": "45.00"
+          },
+          "custom": "ord-1794061688923-80ae",
+          "buyer": {
+            "email": "[REDACTED_BUYER_EMAIL]",
+            "payer_id": "[REDACTED_BUYER_PAYER_ID]",
+            "name": "John Doe"
+          },
+          "seller": {
+            "email": "[REDACTED_MERCHANT_EMAIL]",
+            "merchant_id": "[REDACTED_MERCHANT_ID]",
+            "name": "Test Store"
+          },
+          "items": [
+            {
+              "item_name": "Larkspur Trail 2-Person Tent",
+              "item_description": "Larkspur Trail 2-Person Tent",
+              "item_quantity": "1",
+              "reason": "MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED",
+              "item_type": "PRODUCT"
+            }
+          ],
+          "seller_protection_eligible": true,
+          "seller_protection_type": "EXPANDED_SELLER_PROTECTION"
+        }
+      ],
+      "reason": "MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED",
+      "status": "WAITING_FOR_BUYER_RESPONSE",
+      "dispute_amount": {
+        "currency_code": "USD",
+        "value": "45.00"
+      },
+      "dispute_state": "REQUIRED_OTHER_PARTY_ACTION",
+      "fund_movements": [
+        {
+          "party": "SELLER",
+          "amount": {
+            "currency_code": "USD",
+            "value": "42.94"
+          },
+          "initiated_time": "2026-11-12T01:02:34.000Z",
+          "type": "DEBIT",
+          "reason": "HOLD_PLACED"
+        }
+      ],
+      "dispute_life_cycle_stage": "INQUIRY",
+      "dispute_channel": "INTERNAL",
+      "messages": [
+        {
+          "posted_by": "BUYER",
+          "time_posted": "2026-11-12T00:59:16.322Z",
+          "content": "The tent I received does not match the online product listing description; it is a completely different model and color."
+        },
+        {
+          "posted_by": "SELLER",
+          "time_posted": "2026-11-12T01:13:09.693Z",
+          "content": "Mandate JWS verified (hash: 1bf1243347d65130...). Deterministic Guard ALLOW. Receipt bundle cryptographically locked at purchase (SHA-256: a5bddaf6d6206cee...). Simulated delivery record (sandbox): carrier USPS, tracking 940016136261526288224, status DELIVERED, condition PRISTINE."
+        }
+      ],
+      "extensions": {
+        "merchant_contacted": false,
+        "buyer_contacted_time": "2026-11-12T00:59:15.401Z"
+      },
+      "evidences": [
+        {
+          "evidence_type": "CREATE",
+          "notes": "The tent I received does not match the online product listing description; it is a completely different model and color.",
+          "source": "SUBMITTED_BY_BUYER",
+          "date": "2026-11-12T00:59:16.322Z",
+          "dispute_life_cycle_stage": "INQUIRY"
+        }
+      ],
+      "buyer_response_due_date": "2026-12-02T00:59:16.322Z",
+      "offer": {
+        "buyer_requested_amount": {
+          "currency_code": "USD",
+          "value": "45.00"
+        }
+      },
+      "refund_details": {
+        "allowed_refund_amount": {
+          "currency_code": "USD",
+          "value": "45.00"
+        }
+      },
+      "allowed_response_options": {
+        "accept_claim": {
+          "accept_claim_types": [
+            "REFUND"
+          ]
+        }
+      },
+      "links": [
+        {
+          "href": "https://api-m.sandbox.paypal.com/v1/customer/disputes/PP-R-RGO-10199647",
+          "rel": "self",
+          "method": "GET",
+          "encType": "application/json"
+        },
+        {
+          "href": "https://api-m.sandbox.paypal.com/v1/customer/disputes/PP-R-RGO-10199647/escalate",
+          "rel": "escalate",
+          "method": "POST",
+          "encType": "application/json"
+        },
+        {
+          "href": "https://api-m.sandbox.paypal.com/v1/customer/disputes/PP-R-RGO-10199647/send-message",
+          "rel": "send_message",
+          "method": "POST",
+          "encType": "application/json"
+        },
+        {
+          "href": "https://api-m.sandbox.paypal.com/v1/customer/disputes/PP-R-RGO-10199647/accept-claim",
+          "rel": "accept_claim",
+          "method": "POST",
+          "encType": "application/json"
+        }
+      ]
+    }
   }
 }

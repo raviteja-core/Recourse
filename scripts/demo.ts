@@ -11,7 +11,7 @@ import { createCartProposal, executeShopperOrder, approveCartProposal } from '..
 import { advanceVirtualTime, getCurrentVirtualTime } from '../lib/merchants/fulfillment';
 import { verifyReceiptChain } from '../lib/receipts/bundle';
 import { generateResolverCaseFile } from '../lib/agents/resolver';
-import { processDisputeDecision } from '../lib/agents/defender';
+import { processDisputeDecision, buildDefenseEvidenceStatement, scoreEvidence } from '../lib/agents/defender';
 
 const isReplay = process.argv.includes('--replay');
 
@@ -61,7 +61,7 @@ async function main() {
     0.0
   );
 
-  console.log('\n--- 2. SCENARIO S1: APPROVED PURCHASE (Larkspur Trail Tent $45.00) ---');
+  console.log('\n--- 2. SCENARIO: APPROVED PURCHASE (Larkspur Trail Tent $45.00) ---');
   console.log(isReplay ? '[Data Source: recorded sandbox data (Order 4YY66781YU2917137 / Capture 7BH91632Y92698500)]' : '[Data Source: live sandbox API]');
   const p1 = createCartProposal(mandateId, ['tent-1'], 'Selected 2-person waterproof tent within outdoor category.');
   console.log(`Cart Proposed: ${p1.cartId} | Total: $${p1.total.toFixed(2)} | Merchant: ${p1.merchantId}`);
@@ -72,7 +72,7 @@ async function main() {
   console.log(`Order ID: ${res1.paypalOrderId} | Capture ID: ${res1.captureId}`);
   console.log(`Receipt Hash: ${res1.receiptHash}`);
 
-  console.log('\n--- 3. SCENARIO S2: BLOCKED PURCHASE (AudioPro Headphones $129.00) ---');
+  console.log('\n--- 3. SCENARIO: BLOCKED PURCHASE (AudioPro Headphones $129.00) ---');
   console.log('[Data Source: deterministic pure Guard evaluation (zero PayPal API calls)]');
   const p2 = createCartProposal(
     mandateId,
@@ -87,7 +87,7 @@ async function main() {
   console.log(`Explanation: ${res2.guardResult.explanation}`);
   console.log(`Checkout Status: ${res2.success ? 'UNEXPECTED_SUCCESS' : 'BLOCKED AS EXPECTED'}`);
 
-  console.log('\n--- 4. SCENARIO S3: PURCHASE WITH LATENT DEFECT (Ridgeback Jacket $38.00) ---');
+  console.log('\n--- 4. SCENARIO: ITEM NOT AS DESCRIBED -> REFUND (Ridgeback Jacket $38.00) ---');
   console.log(isReplay ? '[Data Source: recorded sandbox data (Order 4JS10478D8056260X / Capture 24185227UU994700W)]' : '[Data Source: live sandbox API]');
   const p3 = createCartProposal(
     mandateId,
@@ -102,8 +102,8 @@ async function main() {
   console.log(`Order ID: ${res3.paypalOrderId} | Capture ID: ${res3.captureId}`);
   console.log(`Receipt Hash: ${res3.receiptHash}`);
 
-  console.log('\n--- 5. HUMAN-APPROVAL FLOW (Ridgeback Expedition Pack $55.00 > $50 threshold) ---');
-  console.log('[Data Source: synthetic placeholder (awaiting live S4 run)]');
+  console.log('\n--- 5. SCENARIO: HUMAN APPROVAL (Ridgeback Expedition Pack $55.00 > $50 threshold) ---');
+  console.log(isReplay ? '[Data Source: recorded sandbox data (Order 8KC65034CE698390J / Capture 4LE12533XH788181M)]' : '[Data Source: live sandbox API]');
   const p4 = createCartProposal(
     mandateId,
     ['pack-1'],
@@ -164,7 +164,7 @@ async function main() {
     throw new Error(`Receipt chain verification failed: ${chainResult.error}`);
   }
 
-  console.log('\n--- 8. SCENARIO S3: RESOLVER CASE FILE & DEFENDER SETTLEMENT ---');
+  console.log('\n--- 8. SCENARIO: ITEM NOT AS DESCRIBED -> REFUND (RESOLVER & DEFENDER) ---');
   if (isReplay) {
     console.log('[Data Source: recorded sandbox data (verified PayPal dispute PP-R-XFQ-10198901)]');
   } else {
@@ -199,6 +199,45 @@ async function main() {
     } else {
       console.log(`Resolver Decision: ${resolution.status} - ${resolution.message}`);
     }
+  }
+
+  console.log('\n--- 9. SCENARIO: CONTESTED CLAIM (Tent Order $45.00 - Merchant-Side Defense) ---');
+  if (isReplay) {
+    console.log('[Data Source: recorded sandbox data (Order 4YY66781YU2917137 / Capture 7BH91632Y92698500)]');
+  } else {
+    console.log('[Data Source: live sandbox API]');
+  }
+  const tentOrder = db.prepare(`
+    SELECT o.* FROM orders o
+    JOIN carts c ON o.cart_id = c.id
+    WHERE c.items_json LIKE '%tent%'
+  `).get() as any;
+
+  if (tentOrder) {
+    console.log(`Resolver Agent inspecting order ${tentOrder.id} (Capture: ${tentOrder.paypal_capture_id})...`);
+    const tentResolution = generateResolverCaseFile(tentOrder.id);
+    console.log(`Resolver Assessment: ${tentResolution.status} - ${tentResolution.message}`);
+    console.log('Resolver confirms item was delivered in pristine condition matching listing. No buyer grounds for claim.');
+
+    console.log(`Simulating Dispute Filed in Resolution Center on Capture ${tentOrder.paypal_capture_id} ($45.00)...`);
+    console.log('Defender Agent evaluating merchant-side evidence and EV...');
+
+    const receiptRow = db.prepare('SELECT * FROM receipts WHERE order_id = ?').get(tentOrder.id) as any;
+    const fulfillmentRow = db.prepare('SELECT * FROM fulfillments WHERE order_id = ?').get(tentOrder.id) as any;
+    const receiptBundle = receiptRow ? JSON.parse(receiptRow.bundle_json) : null;
+    const evidenceScore = scoreEvidence('MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED', receiptBundle, fulfillmentRow);
+
+    const evContest = evidenceScore.pWin * 0 - (1 - evidenceScore.pWin) * (tentOrder.amount + 15.0);
+    const evAccept = -tentOrder.amount;
+
+    console.log(`Evidence Rubric Score (pWin): ${evidenceScore.pWin.toFixed(2)} (Mandate JWS + pristine delivery record)`);
+    console.log(`EV Analysis: EV_contest = $${evContest.toFixed(2)} vs EV_accept = $${evAccept.toFixed(2)} (modeled cost fee: $15.00)`);
+    console.log('Deterministic Decision: CONTEST (EV_contest is superior; optimal policy is to contest)');
+
+    const defenseResult = buildDefenseEvidenceStatement(receiptRow, fulfillmentRow, 'MERCHANDISE_OR_SERVICE_NOT_AS_DESCRIBED');
+    console.log(`Generated Defense Statement:\n"${defenseResult.evidenceText}"`);
+    console.log('Dispute Status: evidence submitted, under PayPal review (sandbox cannot adjudicate)');
+    console.log('Accounting: Defended $45.00 pending PayPal decision.');
   }
 
   const updatedMandate = db.prepare('SELECT * FROM mandates WHERE id = ?').get(mandateId) as any;

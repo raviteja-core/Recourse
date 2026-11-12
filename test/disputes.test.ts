@@ -177,3 +177,21 @@ describe('Resolver Case File Schema Validation', () => {
   });
 });
 
+describe('Correction C3: Spike Artifact Exclusion & Guard-Path Accounting', () => {
+  it('strictly excludes spike artifacts (5GS32993858853423, 4MW82925T2060654E, PP-R-SQO-10196995)', async () => {
+    const { calculateKpisFromDb, EXCLUDED_SPIKE_ORDER_IDS, EXCLUDED_SPIKE_DISPUTE_IDS } = await import(
+      '../lib/analytics/kpis'
+    );
+
+    expect(EXCLUDED_SPIKE_ORDER_IDS).toContain('5GS32993858853423');
+    expect(EXCLUDED_SPIKE_ORDER_IDS).toContain('4MW82925T2060654E');
+    expect(EXCLUDED_SPIKE_DISPUTE_IDS).toContain('PP-R-SQO-10196995');
+
+    const kpis = calculateKpisFromDb();
+    // In current seeded DB, only the Guard-path jacket refund ($38.00) counts towards recoveredDollars
+    expect(kpis.recoveredDollars).toBe(38.0);
+    // Defended dollars must not count the spike tent dispute
+    expect(kpis.defendedDollars).toBe(0.0);
+  });
+});
+

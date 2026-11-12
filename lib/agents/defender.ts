@@ -132,7 +132,11 @@ export function scoreEvidence(
   const rubricNotes: string[] = [];
 
   // 1. Mandate authorization proof (mandate hash and signed JWS presence)
-  if (receiptBundle?.mandateHash && receiptBundle?.guardDecision?.decision === 'ALLOW') {
+  const isGuardAllow =
+    receiptBundle?.guard?.decision === 'ALLOW' ||
+    receiptBundle?.guardDecision?.decision === 'ALLOW';
+
+  if (receiptBundle?.mandateHash && isGuardAllow) {
     mandateAuthorizationProof = 0.30;
     rubricNotes.push(`Mandate authorization verified (${receiptBundle.mandateHash.slice(0, 12)}...): Guard ALLOW (+0.30)`);
   } else {

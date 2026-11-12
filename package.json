@@ -10,6 +10,7 @@
     "test": "vitest run",
     "seed": "tsx scripts/seed.ts",
     "demo": "tsx scripts/demo.ts",
+    "setup:vault": "tsx scripts/setup-vault.ts",
     "spike:1": "tsx scripts/spike-1-vault-order.ts",
     "spike:2": "tsx scripts/spike-2-disputes.ts",
     "spike:3": "tsx scripts/spike-3-webhooks.ts",

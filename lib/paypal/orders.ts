@@ -7,7 +7,7 @@ const BASE_URL = process.env.PAYPAL_BASE_URL || 'https://api-m.sandbox.paypal.co
 const CLIENT_ID = process.env.PAYPAL_CLIENT_ID;
 const CLIENT_SECRET = process.env.PAYPAL_CLIENT_SECRET || process.env.PAYPAL_SECRET;
 
-async function getAccessToken(): Promise<string> {
+export async function getAccessToken(): Promise<string> {
   const clientId = process.env.PAYPAL_CLIENT_ID;
   const clientSecret = process.env.PAYPAL_CLIENT_SECRET || process.env.PAYPAL_SECRET;
   const baseUrl = process.env.PAYPAL_BASE_URL || 'https://api-m.sandbox.paypal.com';

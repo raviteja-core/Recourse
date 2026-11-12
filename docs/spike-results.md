@@ -145,6 +145,26 @@ This document records the actual behavior, request/response shapes, field struct
 
 ---
 
+## Live Contested Claim Verification: Tent Dispute (`PP-R-RGO-10199647`)
+*Status: COMPLETED (Verified live against PayPal Sandbox)*
+
+- **Dispute ID:** `PP-R-RGO-10199647`
+- **Target Transaction:** Capture `7BH91632Y92698500` (Order `4YY66781YU2917137`, Larkspur Trail 2-Person Tent, $45.00 USD)
+- **Simulated Buyer Ground:** User submitted a simulated buyer dispute stating *"The tent I received does not match the online product listing description; it is a completely different model and color."*
+- **Resolver Evaluation:** Returned `NO_GROUNDS` (`ITEM_MATCHES_LISTING`). Stored delivery inspection confirmed pristine condition with factory seal intact.
+- **Defender Evidence Scoring & EV:**
+  - $p_{\text{win}} = 0.95$ (backed by Mandate JWS and pristine delivery record).
+  - $\text{EV}_{\text{contest}} = -3.00$ vs $\text{EV}_{\text{accept}} = -45.00$ (modeled dispute handling fee: $15.00).
+  - Deterministic Policy: `CONTEST`.
+- **Evidence Construction:** Cites only facts stored in SQLite:
+  `"Mandate JWS verified (hash: 1bf1243347d65130...). Deterministic Guard ALLOW. Receipt bundle cryptographically locked at purchase (SHA-256: a5bddaf6d6206cee...). Simulated delivery record (sandbox): carrier USPS, tracking 940016136261526288224, status DELIVERED, condition PRISTINE."`
+- **Action Taken:** `POST /v1/customer/disputes/PP-R-RGO-10199647/send-message` (`200 OK`).
+- **Post-Submission State:** Status moved from `WAITING_FOR_SELLER_RESPONSE` to `WAITING_FOR_BUYER_RESPONSE`.
+- **Display Status:** `"evidence submitted, under PayPal review (sandbox cannot adjudicate)"`.
+- **Accounting:** Tracked as **Defended $45.00 pending PayPal decision**.
+
+---
+
 ## Spike 3: Webhook Registration & Verification (`scripts/spike-3-webhooks.ts`)
 *Status: Pending Phase 1 execution*
 
